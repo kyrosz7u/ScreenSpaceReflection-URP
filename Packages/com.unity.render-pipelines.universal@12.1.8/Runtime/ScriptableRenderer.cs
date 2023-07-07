@@ -469,7 +469,7 @@ namespace UnityEngine.Rendering.Universal
 
         // The pipeline can only guarantee the camera target texture are valid when the pipeline is executing.
         // Trying to access the camera target before or after might be that the pipeline texture have already been disposed.
-        bool m_IsPipelineExecuting = false;
+        protected bool m_IsPipelineExecuting = false;
         // This should be removed when early camera color target assignment is removed.
         internal bool isCameraColorTargetValid = false;
 
