@@ -46,7 +46,7 @@ namespace RendererFeature
         {
             m_ColorTexture = m_Renderer.cameraColorTarget;
             m_NormalTexture = m_Renderer.cameraNormalTarget;
-            ConfigureTarget(m_Renderer.cameraColorTarget, m_Renderer.cameraDepthTarget);
+            ConfigureTarget(m_Renderer.cameraColorTarget);
         }
         
 

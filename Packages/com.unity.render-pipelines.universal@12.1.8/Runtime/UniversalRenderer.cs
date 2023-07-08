@@ -677,7 +677,7 @@ namespace UnityEngine.Rendering.Universal
 
                         int gbufferNormalIndex = m_DeferredLights.GBufferNormalSmoothnessIndex;
                         m_DepthNormalPrepass.Setup(cameraTargetDescriptor, m_ActiveCameraDepthAttachment, m_DeferredLights.GbufferAttachments[gbufferNormalIndex]);
-
+                        m_NormalsTexture = m_DeferredLights.GbufferAttachments[gbufferNormalIndex];
                         // Change the normal format to the one used by the gbuffer.
                         RenderTextureDescriptor normalDescriptor = m_DepthNormalPrepass.normalDescriptor;
                         normalDescriptor.graphicsFormat = m_DeferredLights.GetGBufferFormat(gbufferNormalIndex);
