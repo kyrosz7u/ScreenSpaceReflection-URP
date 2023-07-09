@@ -7,10 +7,10 @@ Shader "ScreenSpaceReflectionShader"
     #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
     
     
-    float _MaxStep = 128;
+    float _MaxSteps = 128;
     float _StepSize = 0.1;
     float _MaxDistance = 100;
-    float _Thickness = 1;
+    float _Thickness = 0.1;
     TEXTURE2D_X_FLOAT(_CameraColorTexture);
     SAMPLER(sampler_CameraColorTexture);
 
@@ -43,7 +43,9 @@ Shader "ScreenSpaceReflectionShader"
         output.positionCS.xy = output.positionCS.xy * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f); //convert to -1..1
         output.uv = GetQuadTexCoord(input.vertexID) * _ScaleBias.xy + _ScaleBias.zw;
     #else
-        output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+        // output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+        output.positionCS = input.positionOS;
+        output.positionCS.y = -output.positionCS.y;
         output.uv = input.uv;
     #endif
 
@@ -66,44 +68,55 @@ Shader "ScreenSpaceReflectionShader"
             // 调整 z 以匹配 OpenGL 的 NDC
             float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(UV));
         #endif
-        float3 viewPos = ComputeViewSpacePosition(uv, depth, UNITY_MATRIX_I_P);
+        float3 worldPos = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
+        // viewPos.z = -viewPos.z;
+
+        float4 clipPos = mul(UNITY_MATRIX_VP,float4(worldPos,1));
+        clipPos.xyz/=clipPos.w;
+        clipPos.xy = clipPos.xy*0.5+0.5;
+        clipPos.y = 1.0 - clipPos.y;
+        float clipDepth = SampleSceneDepth(clipPos.xy);
         
         // 计算反射向量
-        float3 viewDir = normalize(-viewPos);
+        float3 viewDir = normalize(worldPos - _WorldSpaceCameraPos);
+        // reverseY 天坑，renderdoc里发现的
         float3 reflectDir = normalize(reflect(viewDir, normal));
 
         float4 reflColor = float4(0,0,0,0);
         UNITY_LOOP
-        for(int i=0;i<_MaxStep;i++)
+        for(int i=2;i<=_MaxSteps;i++)
         {
-            float3 reflPos=viewPos+reflectDir*_StepSize*i;
+            float3 reflPos=worldPos+reflectDir*_StepSize*i;
             
-            float4 reflPosCS=mul(unity_CameraProjection,float4(reflPos,1));
-            reflPosCS.xy/=reflPosCS.w;
+            float4 reflPosCS=mul(UNITY_MATRIX_VP,float4(reflPos,1));
+            reflPosCS.xyz/=reflPosCS.w;
             
-            float screenDepth = reflPosCS.z;
             float2 reflUV= reflPosCS.xy*0.5+0.5;
-            float reflDepth=SampleSceneDepth(reflUV);
-            // 处理平台差异
-            #if UNITY_REVERSED_Z
-                screenDepth = 1.0 - screenDepth;
-                reflDepth = 1.0 - reflDepth;
-            #else
-                reflDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, reflDepth);
-            #endif
+            float reflDepth = reflPosCS.z;
             
-           if(reflUV.x > 0.0 && reflUV.y > 0.0 && reflUV.x < 1.0 && reflUV.y < 1.0 &&screenDepth<reflDepth)
-           {
-               // reflColor=SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, reflUV);
-               reflColor = float4(reflUV,0.0f,1.0f);
-               break;
-           }
+            if(reflUV.x <0.0 || reflUV.y < 0.0 || reflUV.x > 1.0 || reflUV.y > 1.0 ) break;
+            
+            reflUV.y = 1.0 - reflUV.y;
+            
+            float screenDepth=SampleSceneDepth(reflUV);
+
+            screenDepth = Linear01Depth(screenDepth, _ZBufferParams);
+            reflDepth = Linear01Depth(reflDepth, _ZBufferParams);
+            if (screenDepth >0.5 || reflDepth >0.5) break;
+            // reflColor = float4(i*0.01,0,0,1);
+            if(reflDepth > screenDepth && (screenDepth-reflDepth)<0.001)
+            {
+                reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, reflUV);
+                break;
+            }
+            
         } 
 
-        // return float4(reflectDir*0.5+0.5,1.0f);
-        return float4(viewPos.z,0.0f,0.0f,1.0f);
+        // return float4(reflectDir,1.0f);
+        // return float4(depth,0.0f,0.0f,1.0f);
         // return float4(normal,1);
-        return reflColor;
+        // return float4(depth,Linear01Depth(clipDepth,_ZBufferParams),clipPos.z,1.0f);
+        return color +reflColor;
     }
     
     ENDHLSL
@@ -121,6 +134,7 @@ Shader "ScreenSpaceReflectionShader"
             HLSLPROGRAM
                 #pragma vertex FullscreenVert
                 #pragma fragment Fragment
+                #pragma enable_d3d11_debug_symbols
             ENDHLSL
         }
     }

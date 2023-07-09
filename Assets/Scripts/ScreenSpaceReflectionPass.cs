@@ -49,7 +49,7 @@ namespace RendererFeature
         {
             RenderTextureDescriptor renderTextureDescriptor;
             renderTextureDescriptor = cameraTextureDescriptor;
-            renderTextureDescriptor.msaaSamples = 1;
+            // renderTextureDescriptor.msaaSamples = 1;
             
             cmd.GetTemporaryRT(m_RenderTarget.id, renderTextureDescriptor, FilterMode.Bilinear);
             
@@ -71,9 +71,14 @@ namespace RendererFeature
             cmd.SetGlobalTexture(CameraDepthTexture, m_DepthTexture);
             cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
             cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
+            m_Material.SetFloat("_MaxSteps", 32);
+            m_Material.SetFloat("_StepSize", 0.03f);
+            m_Material.SetFloat("_MaxDistance", 5);
+            m_Material.SetFloat("_Thickness", 0.01f);
+            
             // cmd.SetRenderTarget(m_RenderTarget, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
             
-            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            // cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
             cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
             
             context.ExecuteCommandBuffer(cmd);
