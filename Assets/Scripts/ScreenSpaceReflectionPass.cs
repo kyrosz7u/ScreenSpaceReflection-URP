@@ -17,6 +17,7 @@ namespace RendererFeature
         private RenderTargetIdentifier m_NormalTexture;
         private UniversalRenderer m_Renderer;
         private RenderTargetHandle m_RenderTarget;
+        RenderTextureDescriptor renderTextureDescriptor;
         
         private const string k_ShaderName = "ScreenSpaceReflectionShader";
         private static readonly int CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture");
@@ -47,13 +48,7 @@ namespace RendererFeature
         
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            RenderTextureDescriptor renderTextureDescriptor;
             renderTextureDescriptor = cameraTextureDescriptor;
-            // renderTextureDescriptor.msaaSamples = 1;
-            
-            cmd.GetTemporaryRT(m_RenderTarget.id, renderTextureDescriptor, FilterMode.Bilinear);
-            
-            ConfigureTarget(m_RenderTarget.Identifier());
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -61,6 +56,9 @@ namespace RendererFeature
             m_DepthTexture = m_Renderer.cameraDepthTarget;
             m_ColorTexture = m_Renderer.cameraColorTarget;
             m_NormalTexture = m_Renderer.cameraNormalTarget;
+            
+            cmd.GetTemporaryRT(m_RenderTarget.id, renderingData.cameraData.cameraTargetDescriptor, FilterMode.Point);
+            ConfigureTarget(m_RenderTarget.Identifier());
         }
         
 
@@ -72,7 +70,7 @@ namespace RendererFeature
             cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
             cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
             m_Material.SetFloat("_MaxSteps", 32);
-            m_Material.SetFloat("_StepSize", 0.03f);
+            m_Material.SetFloat("_StepSize", 0.1f);
             m_Material.SetFloat("_MaxDistance", 5);
             m_Material.SetFloat("_Thickness", 0.01f);
             
