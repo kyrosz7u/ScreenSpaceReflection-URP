@@ -70,7 +70,7 @@ namespace RendererFeature
             cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
             cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
             m_Material.SetFloat("_MaxSteps", 32);
-            m_Material.SetFloat("_StepSize", 0.1f);
+            m_Material.SetFloat("_StepSize", 0.01f);
             m_Material.SetFloat("_MaxDistance", 5);
             m_Material.SetFloat("_Thickness", 0.01f);
             
