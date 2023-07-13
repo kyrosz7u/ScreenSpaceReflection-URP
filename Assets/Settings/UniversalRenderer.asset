@@ -1,5 +1,28 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8734328408597960502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c173f6b0c6c99044b3d2f50292456f4, type: 3}
+  m_Name: ScreenSpaceReflectionFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    Event: 300
+    depthCompareFunction: 4
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -55,20 +78,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b9a28c7ef3c4bdeaab8db20491008d7, type: 3}
+  m_Script: {fileID: 0}
   m_Name: DummyFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
-  settings:
-    Event: 300
-    depthCompareFunction: 4
-    stencilSettings:
-      overrideStencilState: 0
-      stencilReference: 0
-      stencilCompareFunction: 8
-      passOperation: 0
-      failOperation: 0
-      zFailOperation: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -84,8 +96,8 @@ MonoBehaviour:
   debugShaders:
     debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7, type: 3}
   m_RendererFeatures:
-  - {fileID: 7221437931657127331}
-  m_RendererFeatureMap: a365f4bb89b33764
+  - {fileID: -8734328408597960502}
+  m_RendererFeatureMap: ca68eabd966ec986
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -123,26 +135,3 @@ MonoBehaviour:
   m_ClusteredRendering: 0
   m_TileSize: 32
   m_IntermediateTextureMode: 1
---- !u!114 &7221437931657127331
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7c173f6b0c6c99044b3d2f50292456f4, type: 3}
-  m_Name: ScreenSpaceReflectionFeature
-  m_EditorClassIdentifier: 
-  m_Active: 1
-  settings:
-    Event: 300
-    depthCompareFunction: 4
-    stencilSettings:
-      overrideStencilState: 0
-      stencilReference: 0
-      stencilCompareFunction: 8
-      passOperation: 0
-      failOperation: 0
-      zFailOperation: 0
