@@ -15,14 +15,12 @@ MonoBehaviour:
   m_Active: 1
   settings:
     Event: 300
-    depthCompareFunction: 4
-    stencilSettings:
-      overrideStencilState: 0
-      stencilReference: 0
-      stencilCompareFunction: 8
-      passOperation: 0
-      failOperation: 0
-      zFailOperation: 0
+    MaxSteps: 32
+    StepSize: 0.5
+    MaxDistance: 31.6
+    Thickness: 0.61
+    ResolutionScale: 0.5
+    ReflectionBlur: 1
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

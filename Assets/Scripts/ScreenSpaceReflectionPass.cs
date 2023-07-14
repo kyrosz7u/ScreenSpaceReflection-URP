@@ -8,7 +8,6 @@ namespace RendererFeature
     {
         private const string CommandBufferTag = "ScreenSpaceReflectionPass";
         private Material m_Material;
-        private FilteringSettings m_FilteringSettings;
         private RenderStateBlock m_RenderStateBlock;
         private RenderQueueRange m_renderQueueRange;
         private RenderTextureDescriptor m_CameraTextureDescriptor;
@@ -27,7 +26,7 @@ namespace RendererFeature
         
         public void Setup(
             RenderPassEvent renderPassEvent, 
-            FilteringSettings filterSettings,
+            ScreenSpaceReflectionFeature.ScreenSpaceReflectionSettings settings,
             UniversalRenderer renderer,
             RenderTargetHandle renderTarget)
         {
@@ -35,8 +34,6 @@ namespace RendererFeature
             m_Renderer = renderer;
             m_RenderTarget = renderTarget;
             
-            uint renderingLayerMask = (uint)1 << (int)(filterSettings.renderingLayerMask - 1);
-            m_FilteringSettings = new FilteringSettings(m_renderQueueRange, filterSettings.layerMask, renderingLayerMask);
             m_Material = CoreUtils.CreateEngineMaterial(k_ShaderName);
             ConfigureInput(ScriptableRenderPassInput.Color);
             // 告诉URP renderer，这个pass需要camera的normal texture，
@@ -44,8 +41,14 @@ namespace RendererFeature
             // 先把normal texture渲染到camera的normal texture上
             ConfigureInput(ScriptableRenderPassInput.Depth);
             ConfigureInput(ScriptableRenderPassInput.Normal);
+            
+            m_Material.SetFloat("_MaxSteps", settings.MaxSteps);
+            m_Material.SetFloat("_StepSize", settings.StepSize);
+            m_Material.SetFloat("_MaxDistance", settings.MaxDistance);
+            m_Material.SetFloat("_Thickness", settings.Thickness);
+            m_Material.SetFloat("_ResolutionScale", settings.ResolutionScale);
         }
-        
+
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
             renderTextureDescriptor = cameraTextureDescriptor;
@@ -69,10 +72,6 @@ namespace RendererFeature
             cmd.SetGlobalTexture(CameraDepthTexture, m_DepthTexture);
             cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
             cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
-            m_Material.SetFloat("_MaxSteps", 32);
-            m_Material.SetFloat("_StepSize", 0.01f);
-            m_Material.SetFloat("_MaxDistance", 5);
-            m_Material.SetFloat("_Thickness", 0.01f);
             
             // cmd.SetRenderTarget(m_RenderTarget, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
             

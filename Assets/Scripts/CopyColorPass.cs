@@ -1,3 +1,4 @@
+using RendererFeature;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -8,7 +9,6 @@ namespace DefaultNamespace
     {
         private const string CommandBufferTag = "ScreenSpaceReflectionPass";
         private Material m_Material;
-        private FilteringSettings m_FilteringSettings;
         private RenderStateBlock m_RenderStateBlock;
         private RenderQueueRange m_renderQueueRange;
         private UniversalRenderer m_Renderer;
@@ -20,15 +20,13 @@ namespace DefaultNamespace
         
         public void Setup(
             RenderPassEvent renderPassEvent, 
-            FilteringSettings filterSettings,
+            ScreenSpaceReflectionFeature.ScreenSpaceReflectionSettings filterSettings,
             UniversalRenderer renderer,
             RenderTargetHandle screenSpaceReflectionTexture)
         {
             this.renderPassEvent = renderPassEvent;
             m_Renderer = renderer;
             
-            uint renderingLayerMask = (uint)1 << (int)(filterSettings.renderingLayerMask - 1);
-            m_FilteringSettings = new FilteringSettings(m_renderQueueRange, filterSettings.layerMask, renderingLayerMask);
             m_Material = CoreUtils.CreateEngineMaterial(k_ShaderName);
             m_ScreenSpaceReflectionTexture = screenSpaceReflectionTexture;
         }
