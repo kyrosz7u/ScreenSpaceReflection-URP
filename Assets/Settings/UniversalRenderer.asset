@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   settings:
-    Event: 300
-    MaxSteps: 32
-    StepSize: 0.5
-    MaxDistance: 31.6
-    Thickness: 0.61
-    ResolutionScale: 0.5
+    Event: 400
+    MaxSteps: 16
+    StepSize: 0.54
+    MaxDistance: 7.39
+    Thickness: 0.01
+    ResolutionScale: 0.6
     ReflectionBlur: 1
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
