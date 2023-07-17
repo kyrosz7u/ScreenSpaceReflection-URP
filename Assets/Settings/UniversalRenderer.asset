@@ -20,7 +20,8 @@ MonoBehaviour:
     MaxDistance: 7.39
     Thickness: 0.01
     ResolutionScale: 0.6
-    ReflectionBlur: 1
+    ReflectionBlurSpread: 0
+    LuminanceCloseOpThreshold: 0.525
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

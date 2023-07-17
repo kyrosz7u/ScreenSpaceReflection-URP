@@ -3,22 +3,6 @@
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
-float _MaxSteps;
-float _StepSize;
-float _MaxDistance;
-float _Thickness;
-float _ResolutionScale;
-
-TEXTURE2D_X_FLOAT(_CameraColorTexture);
-SAMPLER(sampler_CameraColorTexture);
-
-struct Varyings
-{
-    float4 positionCS : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    UNITY_VERTEX_OUTPUT_STEREO
-};
-
 
 float4 RawSSR(Varyings input) : SV_Target
 {
@@ -73,7 +57,7 @@ float4 RawSSR(Varyings input) : SV_Target
             break;
         }
     }
-    return color + reflColor;
+    return float4(reflColor.rgb, 1.0f);
 }
 
 float4 EfficentSSR(Varyings input) : SV_Target
@@ -86,12 +70,12 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float2 texSize = ceil(_ScreenParams.xy);
 
     // Get camera space position
-    #if UNITY_REVERSED_Z
+#if UNITY_REVERSED_Z
     float depth = SampleSceneDepth(uv);
-    #else
-        // Adjust z to match OpenGL's NDC
-        float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(UV));
-    #endif
+#else
+    // Adjust z to match OpenGL's NDC
+    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(UV));
+#endif
 
     uv.y = 1.0 - uv.y;
     float4 NdcPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
@@ -104,12 +88,6 @@ float4 EfficentSSR(Varyings input) : SV_Target
     // view transform don't have scale, so that V_IT = V
     float3 normalVS = normalize(mul(UNITY_MATRIX_V, normal).xyz);
     float3 reflectDir = normalize(reflect(viewDir, normalVS));
-
-    // return float4(viewPos, 1.0f);
-
-    // transform to left-handed coordinate system
-    // viewPos.z = _ProjectionParams.x * viewPos.z;
-    // reflectDir.z = _ProjectionParams.x * reflectDir.z;
 
     // Clip to the near plane
     float rayLength = (_ProjectionParams.x*(viewPos.z + reflectDir.z * _MaxDistance) < _ProjectionParams.y)
@@ -126,22 +104,12 @@ float4 EfficentSSR(Varyings input) : SV_Target
     startFrag.xy = startFrag.xy * 0.5 + 0.5;
     startFrag.y = 1.0 - startFrag.y;
     startFrag.xy = startFrag.xy * texSize;
-
-    // return float4(abs(startFrag.x-uv.x)<0.01f?1.0f:0.0f, abs(startFrag.y-uv.y)<0.01f?1.0f:0.0f,1.0f,1.0f);
-    // return startFrag;
-    // return float4(startFrag.x, startFrag.y, 0.0f, 1.0f);
     
     float4 endFrag = mul(UNITY_MATRIX_P, endView);
     endFrag = endFrag / endFrag.w;
     endFrag.xy = endFrag.xy * 0.5 + 0.5;
     endFrag.y = 1.0 - endFrag.y;
     endFrag.xy = endFrag.xy * texSize;
-
-    float2 fragUV = startFrag / texSize;
-
-    // return SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, fragUV);
-    // return float4(endView.z>0.0f, endView.z<0.0, endView.z, 1.0f);
-    // return endFrag;
 
     float deltaX = endFrag.x - startFrag.x;
     float deltaY = endFrag.y - startFrag.y;
@@ -219,5 +187,5 @@ float4 EfficentSSR(Varyings input) : SV_Target
         reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, fragUV);
     }
 
-    return  float4(color.rgb + reflColor.rgb, 1.0f);
+    return float4(reflColor.rgb, 1.0f);
 }
