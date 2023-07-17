@@ -6,64 +6,137 @@ namespace RendererFeature
 {
     public class ScreenSpaceReflectionPass : ScriptableRenderPass
     {
+        enum ScreenSpacePass
+        {
+            Reflection,
+            Erosion,
+            Dilatation,
+            VerticalBlur,
+            HorizontalBlur,
+            Composite
+        }
+
         private const string CommandBufferTag = "ScreenSpaceReflectionPass";
         private Material m_Material;
-        private FilteringSettings m_FilteringSettings;
         private RenderStateBlock m_RenderStateBlock;
         private RenderQueueRange m_renderQueueRange;
+
         private RenderTextureDescriptor m_CameraTextureDescriptor;
+        private RenderTargetIdentifier m_DepthTexture;
         private RenderTargetIdentifier m_ColorTexture;
         private RenderTargetIdentifier m_NormalTexture;
+        private RenderTargetIdentifier m_RenderTarget;
+
+        private RenderTargetIdentifier m_OddBuffer;
+        private RenderTargetIdentifier m_EvenBuffer;
+
         private UniversalRenderer m_Renderer;
-        
+        RenderTextureDescriptor renderTextureDescriptor;
+
         private const string k_ShaderName = "ScreenSpaceReflectionShader";
+        private static readonly int CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture");
         private static readonly int CameraColorTexture = Shader.PropertyToID("_CameraColorTexture");
         private static readonly int CameraNormalsTex = Shader.PropertyToID("_CameraNormalsTexture");
-        
-        
 
-        public void Setup(RenderPassEvent renderPassEvent, FilteringSettings filterSettings, UniversalRenderer renderer)
+
+        public void Setup(
+            RenderPassEvent renderPassEvent,
+            ScreenSpaceReflectionFeature.ScreenSpaceReflectionSettings settings,
+            UniversalRenderer renderer)
         {
             this.renderPassEvent = renderPassEvent;
             m_Renderer = renderer;
-            
-            uint renderingLayerMask = (uint)1 << (int)(filterSettings.renderingLayerMask - 1);
-            m_FilteringSettings = new FilteringSettings(m_renderQueueRange, filterSettings.layerMask, renderingLayerMask);
+
             m_Material = CoreUtils.CreateEngineMaterial(k_ShaderName);
             ConfigureInput(ScriptableRenderPassInput.Color);
             // 告诉URP renderer，这个pass需要camera的normal texture，
             // 这样URP renderer就会在执行这个pass之前，
             // 先把normal texture渲染到camera的normal texture上
+            ConfigureInput(ScriptableRenderPassInput.Depth);
             ConfigureInput(ScriptableRenderPassInput.Normal);
+
+            m_Material.SetFloat("_MaxSteps", settings.MaxSteps);
+            m_Material.SetFloat("_StepSize", settings.StepSize);
+            m_Material.SetFloat("_MaxDistance", settings.MaxDistance);
+            m_Material.SetFloat("_Thickness", settings.Thickness);
+            m_Material.SetFloat("_ResolutionScale", settings.ResolutionScale);
+            m_Material.SetFloat("_BlurSize", 1.0f + settings.ReflectionBlurSpread);
+            m_Material.SetFloat("_LuminanceCloseOpThreshold", settings.LuminanceCloseOpThreshold);
         }
-        
+
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            
+            renderTextureDescriptor = cameraTextureDescriptor;
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
+            m_DepthTexture = m_Renderer.cameraDepthTarget;
             m_ColorTexture = m_Renderer.cameraColorTarget;
             m_NormalTexture = m_Renderer.cameraNormalTarget;
-            ConfigureTarget(m_Renderer.cameraColorTarget);
+            m_RenderTarget = m_Renderer.cameraColorTarget;
+
+            cmd.GetTemporaryRT(Shader.PropertyToID("_OddBuffer"), renderingData.cameraData.cameraTargetDescriptor,
+                FilterMode.Point);
+            cmd.GetTemporaryRT(Shader.PropertyToID("_EvenBuffer"), renderingData.cameraData.cameraTargetDescriptor,
+                FilterMode.Point);
+            
+            m_OddBuffer = new RenderTargetIdentifier(Shader.PropertyToID("_OddBuffer"));
+            m_EvenBuffer = new RenderTargetIdentifier(Shader.PropertyToID("_EvenBuffer"));
+
         }
-        
+
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             var cmd = CommandBufferPool.Get(CommandBufferTag);
-            
+
+            cmd.SetGlobalTexture(CameraDepthTexture, m_DepthTexture);
             cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
             cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
+
             // cmd.SetRenderTarget(m_RenderTarget, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+
+            // cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.Reflection);
+
+            cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
+            cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.Erosion);
+
+            cmd.SetGlobalTexture("_MainTex", m_EvenBuffer);
+            cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.Dilatation);
             
-            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
-            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
+            cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
+            cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.VerticalBlur);
             
+            cmd.SetGlobalTexture("_MainTex", m_EvenBuffer);
+            cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.HorizontalBlur);
+            
+            cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
+            cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+                (int)ScreenSpacePass.Composite);
+            
+            cmd.Blit(m_EvenBuffer, m_RenderTarget);
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+        }
 
+        public override void FrameCleanup(CommandBuffer cmd)
+        {
+            cmd.ReleaseTemporaryRT(Shader.PropertyToID("_OddBuffer"));
+            cmd.ReleaseTemporaryRT(Shader.PropertyToID("_EvenBuffer"));
         }
     }
 }
