@@ -89,12 +89,17 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float3 normalVS = normalize(mul(UNITY_MATRIX_V, normal).xyz);
     float3 reflectDir = normalize(reflect(viewDir, normalVS));
 
+    float cosTheta = dot(-viewDir, normalVS);
+    if (cosTheta <= 0.01) return float4(0, 0, 0, 0);
+
+    float tanTheta = sqrt(1.0 - cosTheta * cosTheta) / cosTheta;
+    float thickness = _Thickness*clamp(tanTheta, 0.0, 10.0);
+    
+
     // Clip to the near plane
     float rayLength = (_ProjectionParams.x*(viewPos.z + reflectDir.z * _MaxDistance) < _ProjectionParams.y)
                           ? (_ProjectionParams.y - _ProjectionParams.x*viewPos.z) / reflectDir.z*_ProjectionParams.x
                           : _MaxDistance;
-
-    // return float4(rayLength, 0, 0, 1.0f);
 
     float4 startView = float4(viewPos, 1.0);
     float4 endView = float4(viewPos + (reflectDir * rayLength), 1.0);
@@ -115,7 +120,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float deltaY = endFrag.y - startFrag.y;
 
     float useX = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
-    float delta = lerp(abs(deltaY), abs(deltaX), useX)*_ResolutionScale;
+    float delta = lerp(abs(deltaY), abs(deltaX), useX)*_ReflectionStride;
     float2 increment = float2(deltaX, deltaY) / max(delta, 0.001);
 
     
@@ -126,10 +131,11 @@ float4 EfficentSSR(Varyings input) : SV_Target
     int hit0 = 0;
     int hit1 = 0;
     
-    float2 frag = startFrag+4*increment;
+    float2 frag = startFrag;
+    frag += increment*_ReflectionJitter;
 
     UNITY_LOOP
-    for (i = 5; i < int(delta); ++i)
+    for (i = 0; i < int(delta); ++i)
     {
         frag += increment;
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
@@ -142,9 +148,9 @@ float4 EfficentSSR(Varyings input) : SV_Target
     
         // unity's view space depth is negative
         float viewDepth = _ProjectionParams.x* (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
-        float deltaDepth = abs(viewDepth - fragDepth);
+        float deltaDepth = viewDepth - fragDepth;
     
-        if (deltaDepth>0&&deltaDepth < _Thickness)
+        if (deltaDepth>0&&deltaDepth < thickness)
         {
             hit0 = 1;
             break;
@@ -165,9 +171,9 @@ float4 EfficentSSR(Varyings input) : SV_Target
         float fragDepth = LinearEyeDepth(SampleSceneDepth(fragUV), _ZBufferParams);
     
         float viewDepth = _ProjectionParams.x*(startView.z * endView.z) / lerp(endView.z, startView.z, search1);
-        float deltaDepth = abs(viewDepth - fragDepth);
+        float deltaDepth = viewDepth - fragDepth;
     
-        if (deltaDepth > 0 && deltaDepth < _Thickness)
+        if (deltaDepth > 0 && deltaDepth < thickness*0.1)
         {
             hit1 = 1;
             search1 = search0 + ((search1 - search0) / 2);
@@ -189,3 +195,4 @@ float4 EfficentSSR(Varyings input) : SV_Target
 
     return float4(reflColor.rgb, 1.0f);
 }
+

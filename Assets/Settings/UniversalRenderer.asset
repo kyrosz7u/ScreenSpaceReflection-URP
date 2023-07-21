@@ -15,13 +15,13 @@ MonoBehaviour:
   m_Active: 1
   settings:
     Event: 400
-    MaxSteps: 15.79
-    StepSize: 1.2
-    MaxDistance: 6.65
-    Thickness: 0.02
-    ResolutionScale: 0.6
+    MaxSteps: 20.13
+    MaxDistance: 6.53
+    Thickness: 0.254
+    ReflectionStride: 0.705
+    ReflectionJitter: 1
     ReflectionBlurSpread: 0
-    LuminanceCloseOpThreshold: 0.525
+    LuminanceCloseOpThreshold: 0
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

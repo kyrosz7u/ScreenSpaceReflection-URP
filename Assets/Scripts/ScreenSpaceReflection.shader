@@ -27,10 +27,10 @@ Shader "ScreenSpaceReflectionShader"
     SAMPLER(sampler_MainTex);
     
     float _MaxSteps;
-    float _StepSize;
     float _MaxDistance;
     float _Thickness;
-    float _ResolutionScale;
+    float _ReflectionStride;
+    float _ReflectionJitter;
     float _BlurSize;
     float _LuminanceCloseOpThreshold;
 
@@ -60,32 +60,6 @@ Shader "ScreenSpaceReflectionShader"
             #pragma fragment EfficentSSR
             #pragma enable_d3d11_debug_symbols
             ENDHLSL
-        }
-        Pass
-        {
-            Name "SSRErosionPass"
-            ZTest Off
-            ZWrite Off
-            Cull Off
-            
-            HLSLPROGRAM
-            #pragma vertex FullScreenVert
-            #pragma fragment LuminanceErosion
-            #pragma enable_d3d11_debug_symbols
-            ENDHLSL
-        }
-        Pass
-        {
-            Name "SSRDilatationPass"
-            ZTest Off
-            ZWrite Off
-            Cull Off
-            
-            HLSLPROGRAM
-            #pragma vertex FullScreenVert
-            #pragma fragment LuminanceDilatation
-            #pragma enable_d3d11_debug_symbols
-            ENDHLSL    
         }
         Pass
         {

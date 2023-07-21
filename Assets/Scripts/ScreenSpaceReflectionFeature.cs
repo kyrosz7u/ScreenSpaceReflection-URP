@@ -9,10 +9,10 @@ public class ScreenSpaceReflectionFeature: ScriptableRendererFeature
         public RenderPassEvent Event = RenderPassEvent.AfterRenderingOpaques;
 
         public float MaxSteps = 32;
-        public float StepSize = 0.5f;
         public float MaxDistance = 10;
         [Range(0, 1)]public float Thickness = 0.1f;
-        [Range(0, 1)]public float ResolutionScale = 0.5f;
+        [Range(0, 1)]public float ReflectionStride = 0.5f;
+        [Range(0, 1)]public float ReflectionJitter = 1.0f;
         [Range(-0.5f, 0.5f)]public float ReflectionBlurSpread = 0;
         [Range(0, 1)]public float LuminanceCloseOpThreshold = 0.5f;
     }

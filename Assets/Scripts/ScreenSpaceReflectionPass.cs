@@ -7,8 +7,6 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
     private enum ScreenSpacePass
     {
         Reflection,
-        Erosion,
-        Dilatation,
         VerticalBlur,
         HorizontalBlur,
         Composite
@@ -53,10 +51,10 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
         ConfigureInput(ScriptableRenderPassInput.Normal);
 
         m_Material.SetFloat("_MaxSteps", settings.MaxSteps);
-        m_Material.SetFloat("_StepSize", settings.StepSize);
         m_Material.SetFloat("_MaxDistance", settings.MaxDistance);
         m_Material.SetFloat("_Thickness", settings.Thickness);
-        m_Material.SetFloat("_ResolutionScale", settings.ResolutionScale);
+        m_Material.SetFloat("_ReflectionStride", settings.ReflectionStride);
+        m_Material.SetFloat("_ReflectionJitter", settings.ReflectionJitter);
         m_Material.SetFloat("_BlurSize", 1.0f + settings.ReflectionBlurSpread);
         m_Material.SetFloat("_LuminanceCloseOpThreshold", settings.LuminanceCloseOpThreshold);
     }
@@ -90,16 +88,6 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
             (int)ScreenSpacePass.Reflection);
 
-        cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
-        cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
-            (int)ScreenSpacePass.Erosion);
-
-        cmd.SetGlobalTexture("_MainTex", m_EvenBuffer);
-        cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
-            (int)ScreenSpacePass.Dilatation);
-            
         cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
         cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
