@@ -17,10 +17,10 @@ MonoBehaviour:
     Event: 400
     MaxSteps: 20.13
     MaxDistance: 6.53
-    Thickness: 0.254
+    Thickness: 0.233
     ReflectionStride: 0.705
     ReflectionJitter: 1
-    ReflectionBlurSpread: 0
+    ReflectionBlurSpread: 0.111
     LuminanceCloseOpThreshold: 0
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
