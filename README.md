@@ -10,6 +10,10 @@ A Screen Space Reflection implementation in Unity Universal Render Pipeline(URP)
 Unity 2021.3.15 or later
 
 Dx11+ or Vulkan1.3 compatible GPU
+
+# Blog
+https://zhuanlan.zhihu.com/p/647921448
+
 # References
 [Unity Universal Render Pipeline Manual](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@16.0/manual/)
 
