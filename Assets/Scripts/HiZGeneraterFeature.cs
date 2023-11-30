@@ -13,10 +13,9 @@ namespace UnityTemplateProjects
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            hizMap = new RenderTexture(renderer.cameraDepthTarget.descriptor);
             m_HiZGeneraterPass = new HiZGeneraterPass();
             
-            m_HiZGeneraterPass.Setup(RenderPassEvent.AfterRenderingOpaques, renderingData.cameraData.cameraColorTarget);
+            m_HiZGeneraterPass.Setup(RenderPassEvent.AfterRenderingOpaques, renderer, renderingData);
         }
     }
 }
