@@ -20,7 +20,7 @@
         UNITY_VERTEX_INPUT_INSTANCE_ID
     };
 
-    TEXTURE2D_X_FLOAT(_HiZMap);
+    TEXTURE2D(_HiZMap);
     SAMPLER(sampler_HiZMap);
     
     float _SrcWidthInv;

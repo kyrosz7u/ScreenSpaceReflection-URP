@@ -23,10 +23,10 @@ float HizGenerater(Varyings input) : SV_Target
 
     float2 uv = input.uv;
     
-    float depth0 = SAMPLE_TEXTURE2D_X_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
-    float depth1 = SAMPLE_TEXTURE2D_X_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
-    float depth2 = SAMPLE_TEXTURE2D_X_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
-    float depth3 = SAMPLE_TEXTURE2D_X_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
+    float depth0 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
+    float depth1 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
+    float depth2 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
+    float depth3 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
 
     return min(min(min(depth0, depth1), depth2), depth3);
 }

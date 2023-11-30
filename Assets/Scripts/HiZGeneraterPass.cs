@@ -7,15 +7,16 @@ namespace UnityTemplateProjects
 {
     public class HiZGeneraterPass: ScriptableRenderPass
     {
-        public RenderTexture hizMap;
-        private ScriptableRenderer m_Renderer;
+        private RenderTexture hizMap;
+        private UniversalRenderer m_Renderer;
         private RenderTargetIdentifier m_DepthTexture;
         private Material m_Material;
         public void Setup(RenderPassEvent renderPassEvent, ScriptableRenderer renderer, RenderingData renderingData)
         {
             this.renderPassEvent = renderPassEvent;
-            this.hizMap = hizMap;
+            m_Renderer = (UniversalRenderer)renderer;
             m_Material = CoreUtils.CreateEngineMaterial("HiZGeneraterShader");
+            ConfigureInput(ScriptableRenderPassInput.Depth);
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -51,25 +52,40 @@ namespace UnityTemplateProjects
             
             hizMap = RenderTexture.GetTemporary(hizMapDesc);
             hizMap.filterMode = FilterMode.Point;
+            //
+            // cmd.CopyTexture(m_DepthTexture, 0, 0, hizMap, 0, 0);
             
-            cmd.CopyTexture(m_DepthTexture, 0, 0, hizMap, 0, 0);
+            cmd.Blit(m_DepthTexture, hizMap);
             
+            // cmd.SetGlobalTexture("_HiZMap", m_Renderer.cameraDepthTarget);
+            
+            cmd.SetGlobalTexture("_HiZMap", hizMap);
             for(int i=1; i < mipCount; i++)
             {
                 int srcWidth = width >> (i - 1);
                 int srcHeight = height >> (i - 1);
                 
-                m_Material.SetFloat("_SrcWidthInv", 0.5f / srcWidth);
-                m_Material.SetFloat("_SrcHeightInv", 0.5f / srcHeight);
-                m_Material.SetInt("_MipLevel", i - 1);
-                m_Material.SetTexture("_HiZMap", hizMap);
+                // m_Material.SetFloat("_SrcWidthInv", 0.5f / srcWidth);
+                // m_Material.SetFloat("_SrcHeightInv", 0.5f / srcHeight);
+                // m_Material.SetInt("_MipLevel", i - 1);
+                cmd.SetGlobalFloat("_SrcWidthInv", 0.5f / srcWidth);
+                cmd.SetGlobalFloat("_SrcHeightInv", 0.5f / srcHeight);
+                cmd.SetGlobalInt("_MipLevel", i - 1);
                 
                 cmd.SetRenderTarget(hizMap, i);
+                cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
             }
             
-            cmd.SetGlobalTexture("_HiZMap", hizMap);
+            // cmd.SetGlobalTexture("_HiZMap", hizMap);
+            
+            Blit(cmd, hizMap, m_Renderer.cameraDepthTarget);
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
+        public override void FrameCleanup(CommandBuffer cmd)
+        {
+            RenderTexture.ReleaseTemporary(hizMap);
+        }
     }
+    
 }

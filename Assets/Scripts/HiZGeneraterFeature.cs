@@ -5,7 +5,7 @@ namespace UnityTemplateProjects
 {
     public class HiZGeneraterFeature: ScriptableRendererFeature
     {
-        public RenderTexture hizMap;
+        public RenderPassEvent Event = RenderPassEvent.AfterRenderingOpaques;
         private HiZGeneraterPass m_HiZGeneraterPass;
         public override void Create()
         {
@@ -15,7 +15,9 @@ namespace UnityTemplateProjects
         {
             m_HiZGeneraterPass = new HiZGeneraterPass();
             
-            m_HiZGeneraterPass.Setup(RenderPassEvent.AfterRenderingOpaques, renderer, renderingData);
+            m_HiZGeneraterPass.Setup(Event, renderer, renderingData);
+            
+            renderer.EnqueuePass(m_HiZGeneraterPass);
         }
     }
 }
