@@ -25,6 +25,9 @@ Shader "ScreenSpaceReflectionShader"
 
     TEXTURE2D_X_FLOAT(_MainTex);
     SAMPLER(sampler_MainTex);
+
+    TEXTURE2D_X_FLOAT(_HizMap);
+    SAMPLER(sampler_HizMap);
     
     float _MaxSteps;
     float _MaxDistance;

@@ -20,12 +20,11 @@
         UNITY_VERTEX_INPUT_INSTANCE_ID
     };
 
-    TEXTURE2D(_HiZMap);
-    SAMPLER(sampler_HiZMap);
+    TEXTURE2D(_DeepMipMap);
+    SAMPLER(sampler_DeepMipMap);
     
     float _SrcWidthInv;
     float _SrcHeightInv;
-    int _MipLevel;
 
     #include "HizGenerater.hlsl"
     

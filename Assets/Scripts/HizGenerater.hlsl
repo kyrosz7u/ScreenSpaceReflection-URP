@@ -11,6 +11,10 @@ Varyings FullScreenVert(Attributes input)
     #else
     output.positionCS = input.positionOS;
     output.uv = input.uv;
+    # if UNITY_UV_STARTS_AT_TOP
+    output.uv.y = 1-output.uv.y;
+    # endif
+    
     #endif
 
     return output;
@@ -23,10 +27,10 @@ float HizGenerater(Varyings input) : SV_Target
 
     float2 uv = input.uv;
     
-    float depth0 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
-    float depth1 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(-_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
-    float depth2 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, -_SrcHeightInv), _MipLevel).r;
-    float depth3 = SAMPLE_TEXTURE2D_LOD(_HiZMap, sampler_HiZMap, uv + float2(_SrcWidthInv, _SrcHeightInv), _MipLevel).r;
+    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_SrcWidthInv, -_SrcHeightInv)).r;
+    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_SrcWidthInv, _SrcHeightInv)).r;
+    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, -_SrcHeightInv)).r;
+    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, _SrcHeightInv)).r;
 
     return min(min(min(depth0, depth1), depth2), depth3);
 }

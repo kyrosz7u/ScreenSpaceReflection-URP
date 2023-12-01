@@ -124,7 +124,6 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float2 increment = float2(deltaX, deltaY) / max(delta, 0.001);
 
     
-    float i = 0;
     float search0 = 0;
     float search1 = 0;
 
@@ -135,7 +134,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     frag += increment*_ReflectionJitter;
 
     UNITY_LOOP
-    for (i = 0; i < int(delta); ++i)
+    for (int i = 0; i < int(delta); ++i)
     {
         frag += increment;
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
@@ -162,7 +161,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     
     float steps = _MaxSteps * hit0;
     UNITY_LOOP
-    for (i = 0; i < steps; ++i)
+    for (int i = 0; i < steps; ++i)
     {
         frag = lerp(startFrag.xy, endFrag.xy, search1);
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
