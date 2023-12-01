@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -14,6 +15,8 @@ namespace UnityTemplateProjects
         private Material m_Material;
         
         private int m_DeepMipMapID = Shader.PropertyToID("_DeepMipMap");
+        private List<RenderTexture> tmpTexList = new List<RenderTexture>();
+        
         public void Setup(RenderPassEvent renderPassEvent, ScriptableRenderer renderer, RenderingData renderingData)
         {
             this.renderPassEvent = renderPassEvent;
@@ -36,7 +39,7 @@ namespace UnityTemplateProjects
 
             int mipCount = Mathf.FloorToInt(Mathf.Log(Mathf.Min(width, height), 2)) + 1;
             
-            RenderTextureDescriptor hizMapDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.Depth, 0);
+            RenderTextureDescriptor hizMapDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.RFloat, 0);
             
             hizMapDesc.autoGenerateMips = false;
             hizMapDesc.useMipMap = true;
@@ -60,15 +63,17 @@ namespace UnityTemplateProjects
             
             cmd.Blit(m_DepthTexture, hizMap);
             
-            
             for(int i=1; i < mipCount; i++)
             {
                 int srcWidth = width >> (i - 1);
                 int srcHeight = height >> (i - 1);
                 
                 var tmpTex = RenderTexture.GetTemporary(srcWidth, srcHeight, 32, RenderTextureFormat.RFloat , RenderTextureReadWrite.Linear);
+                tmpTex.filterMode = FilterMode.Point;
+                tmpTex.Create();
                 
-                
+                tmpTexList.Add(tmpTex);
+                    
                 cmd.CopyTexture(hizMap, 0, i - 1, 0,0 , srcWidth,srcHeight,  tmpTex,0, 0, 0, 0);
                 
                 cmd.SetGlobalTexture(m_DeepMipMapID, tmpTex);
@@ -79,17 +84,22 @@ namespace UnityTemplateProjects
                 cmd.SetRenderTarget(hizMap, i);
                 cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
                 
-                RenderTexture.ReleaseTemporary(tmpTex);
+                // RenderTexture.ReleaseTemporary(tmpTex);
             }
-            
-            cmd.SetGlobalTexture("_HizMap", hizMap);
-            
+            cmd.SetRenderTarget(m_Renderer.cameraColorTarget,m_Renderer.cameraDepthTarget);
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
         public override void FrameCleanup(CommandBuffer cmd)
         {
             RenderTexture.ReleaseTemporary(hizMap);
+            
+            foreach(var tmpTex in tmpTexList)
+            {
+                RenderTexture.ReleaseTemporary(tmpTex);
+            }
+            
+            tmpTexList.Clear();
         }
     }
     

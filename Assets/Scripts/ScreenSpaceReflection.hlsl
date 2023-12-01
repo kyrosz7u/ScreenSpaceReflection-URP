@@ -137,7 +137,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     for (int i = 0; i < int(delta); ++i)
     {
         frag += increment;
-        if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
+        if(frag.x < 0.0 || frag.y < 0.0 || frag.x >= texSize.x || frag.y >= texSize.y) break;
         float2 fragUV = frag / texSize;
         
         float fragDepth = LinearEyeDepth(SampleSceneDepth(fragUV), _ZBufferParams);
@@ -146,10 +146,10 @@ float4 EfficentSSR(Varyings input) : SV_Target
         search1 = clamp(search1, 0.0, 1.0);
     
         // unity's view space depth is negative
-        float viewDepth = _ProjectionParams.x* (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
-        float deltaDepth = viewDepth - fragDepth;
+        float testDepth = _ProjectionParams.x* (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
+        float deltaDepth = testDepth - fragDepth;
     
-        if (deltaDepth>0&&deltaDepth < thickness)
+        if (deltaDepth>0&&deltaDepth < 0.5f*thickness)
         {
             hit0 = 1;
             break;

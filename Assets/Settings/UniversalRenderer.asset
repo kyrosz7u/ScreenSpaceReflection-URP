@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c173f6b0c6c99044b3d2f50292456f4, type: 3}
   m_Name: ScreenSpaceReflectionFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   settings:
-    Event: 400
+    Event: 500
     MaxSteps: 20.13
     MaxDistance: 6.53
     Thickness: 0.233
