@@ -86,6 +86,8 @@ namespace UnityTemplateProjects
                 
                 // RenderTexture.ReleaseTemporary(tmpTex);
             }
+            cmd.SetGlobalInt("_HizMapMipCount", mipCount);
+            
             cmd.SetRenderTarget(m_Renderer.cameraColorTarget,m_Renderer.cameraDepthTarget);
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

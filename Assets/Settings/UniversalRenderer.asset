@@ -16,8 +16,8 @@ MonoBehaviour:
   settings:
     Event: 500
     MaxSteps: 20.13
-    MaxDistance: 6.53
-    Thickness: 0.233
+    MaxDistance: 10
+    Thickness: 0.2
     ReflectionStride: 0.705
     ReflectionJitter: 1
     ReflectionBlurSpread: 0.111

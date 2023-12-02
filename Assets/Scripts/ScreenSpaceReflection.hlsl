@@ -93,7 +93,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     if (cosTheta <= 0.01) return float4(0, 0, 0, 0);
 
     float tanTheta = sqrt(1.0 - cosTheta * cosTheta) / cosTheta;
-    float thickness = _Thickness*clamp(tanTheta, 0.0, 10.0);
+    float thickness = _Thickness*clamp(tanTheta, 0.0, 20.0);
     
 
     // Clip to the near plane
@@ -123,6 +123,9 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float delta = lerp(abs(deltaY), abs(deltaX), useX)*_ReflectionStride;
     float2 increment = float2(deltaX, deltaY) / max(delta, 0.001);
 
+    float Zincrement = endView.z- startView.z;
+    float Zdelta = abs(Zincrement) / max(delta, 0.001);
+    // thickness = Zdelta * 1000.0f;
     
     float search0 = 0;
     float search1 = 0;
@@ -132,11 +135,11 @@ float4 EfficentSSR(Varyings input) : SV_Target
     
     float2 frag = startFrag;
     frag += increment*_ReflectionJitter;
+    int i;
 
     UNITY_LOOP
-    for (int i = 0; i < int(delta); ++i)
+    for (i = 0; i < int(delta); ++i)
     {
-        frag += increment;
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x >= texSize.x || frag.y >= texSize.y) break;
         float2 fragUV = frag / texSize;
         
@@ -149,11 +152,12 @@ float4 EfficentSSR(Varyings input) : SV_Target
         float testDepth = _ProjectionParams.x* (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
         float deltaDepth = testDepth - fragDepth;
     
-        if (deltaDepth>0&&deltaDepth < 0.5f*thickness)
+        if (deltaDepth>0 && deltaDepth < thickness*0.1f)
         {
             hit0 = 1;
             break;
         }
+        frag += increment;
         search0 = search1;
     }
 
@@ -161,7 +165,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     
     float steps = _MaxSteps * hit0;
     UNITY_LOOP
-    for (int i = 0; i < steps; ++i)
+    for (i = 0; i < steps; ++i)
     {
         frag = lerp(startFrag.xy, endFrag.xy, search1);
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
@@ -172,10 +176,11 @@ float4 EfficentSSR(Varyings input) : SV_Target
         float viewDepth = _ProjectionParams.x*(startView.z * endView.z) / lerp(endView.z, startView.z, search1);
         float deltaDepth = viewDepth - fragDepth;
     
-        if (deltaDepth > 0 && deltaDepth < thickness*0.1)
+        if (deltaDepth > 0 && deltaDepth < thickness*0.1f)
         {
             hit1 = 1;
             search1 = search0 + ((search1 - search0) / 2);
+            break;
         }
         else
         {

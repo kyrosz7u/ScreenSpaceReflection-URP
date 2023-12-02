@@ -32,7 +32,7 @@ float HizGenerater(Varyings input) : SV_Target
     float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, -_SrcHeightInv)).r;
     float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, _SrcHeightInv)).r;
 
-    return min(min(min(depth0, depth1), depth2), depth3);
+    return max(max(max(depth0, depth1), depth2), depth3);
 }
 
         
