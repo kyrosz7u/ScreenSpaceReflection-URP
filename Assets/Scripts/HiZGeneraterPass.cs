@@ -69,6 +69,7 @@ namespace UnityTemplateProjects
                 int srcHeight = height >> (i - 1);
                 
                 var tmpTex = RenderTexture.GetTemporary(srcWidth, srcHeight, 32, RenderTextureFormat.RFloat , RenderTextureReadWrite.Linear);
+                tmpTex.name= "HiZGeneraterPass_tmpTex_" + i;
                 tmpTex.filterMode = FilterMode.Point;
                 tmpTex.Create();
                 
@@ -87,7 +88,7 @@ namespace UnityTemplateProjects
                 // RenderTexture.ReleaseTemporary(tmpTex);
             }
             cmd.SetGlobalInt("_HizMapMipCount", mipCount);
-            
+            cmd.SetGlobalTexture("_HizMap", hizMap); 
             cmd.SetRenderTarget(m_Renderer.cameraColorTarget,m_Renderer.cameraDepthTarget);
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

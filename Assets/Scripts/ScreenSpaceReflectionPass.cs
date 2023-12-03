@@ -18,7 +18,6 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
     private RenderQueueRange m_RenderQueueRange;
 
     private RenderTextureDescriptor m_CameraTextureDescriptor;
-    private RenderTargetIdentifier m_DepthTexture;
     private RenderTargetIdentifier m_ColorTexture;
     private RenderTargetIdentifier m_NormalTexture;
     private RenderTargetIdentifier m_RenderTarget;
@@ -29,7 +28,6 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
     private UniversalRenderer m_Renderer;
 
     private const string KShaderName = "ScreenSpaceReflectionShader";
-    private static readonly int CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture");
     private static readonly int CameraColorTexture = Shader.PropertyToID("_CameraColorTexture");
     private static readonly int CameraNormalsTex = Shader.PropertyToID("_CameraNormalsTexture");
 
@@ -61,10 +59,11 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
     {
-        m_DepthTexture = m_Renderer.cameraDepthTarget;
         m_ColorTexture = m_Renderer.cameraColorTarget;
         m_NormalTexture = m_Renderer.cameraNormalTarget;
         m_RenderTarget = m_Renderer.cameraColorTarget;
+        
+        m_CameraTextureDescriptor = renderingData.cameraData.cameraTargetDescriptor;
 
         cmd.GetTemporaryRT(Shader.PropertyToID("_OddBuffer"), renderingData.cameraData.cameraTargetDescriptor,
             FilterMode.Point);
@@ -80,7 +79,6 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
     {
         var cmd = CommandBufferPool.Get(CommandBufferTag);
 
-        cmd.SetGlobalTexture(CameraDepthTexture, m_DepthTexture);
         cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
         cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
         

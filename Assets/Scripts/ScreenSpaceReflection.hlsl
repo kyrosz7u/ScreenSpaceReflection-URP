@@ -3,6 +3,10 @@
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
+float LoadHiZDepth(uint2 uv, int mipLevel = 0)
+{
+    return LOAD_TEXTURE2D_X(_HizMap, uv).r;
+}
 
 float4 RawSSR(Varyings input) : SV_Target
 {
@@ -94,6 +98,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
 
     float tanTheta = sqrt(1.0 - cosTheta * cosTheta) / cosTheta;
     float thickness = _Thickness*clamp(tanTheta, 0.0, 20.0);
+    thickness = _Thickness;
     
 
     // Clip to the near plane
@@ -122,10 +127,7 @@ float4 EfficentSSR(Varyings input) : SV_Target
     float useX = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
     float delta = lerp(abs(deltaY), abs(deltaX), useX)*_ReflectionStride;
     float2 increment = float2(deltaX, deltaY) / max(delta, 0.001);
-
-    float Zincrement = endView.z- startView.z;
-    float Zdelta = abs(Zincrement) / max(delta, 0.001);
-    // thickness = Zdelta * 1000.0f;
+    
     
     float search0 = 0;
     float search1 = 0;
@@ -141,18 +143,19 @@ float4 EfficentSSR(Varyings input) : SV_Target
     for (i = 0; i < int(delta); ++i)
     {
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x >= texSize.x || frag.y >= texSize.y) break;
-        float2 fragUV = frag / texSize;
+
+        float2 fragCenter = floor(frag)+0.5;
         
-        float fragDepth = LinearEyeDepth(SampleSceneDepth(fragUV), _ZBufferParams);
+        float fragDepth = LinearEyeDepth(LoadHiZDepth(fragCenter), _ZBufferParams);
         
-        search1 = lerp((frag.y - startFrag.y) / deltaY, (frag.x - startFrag.x) / deltaX, useX);
+        search1 = lerp((fragCenter.y - startFrag.y) / deltaY, (fragCenter.x - startFrag.x) / deltaX, useX);
         search1 = clamp(search1, 0.0, 1.0);
     
         // unity's view space depth is negative
         float testDepth = _ProjectionParams.x* (startView.z * endView.z) / lerp(endView.z, startView.z, search1);
         float deltaDepth = testDepth - fragDepth;
     
-        if (deltaDepth>0 && deltaDepth < thickness*0.1f)
+        if (deltaDepth>0 && deltaDepth < thickness)
         {
             hit0 = 1;
             break;
@@ -170,17 +173,20 @@ float4 EfficentSSR(Varyings input) : SV_Target
         frag = lerp(startFrag.xy, endFrag.xy, search1);
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x > texSize.x || frag.y > texSize.y) break;
         
-        float2 fragUV = frag / texSize;
-        float fragDepth = LinearEyeDepth(SampleSceneDepth(fragUV), _ZBufferParams);
+        float fragDepth = LinearEyeDepth(LoadHiZDepth(frag), _ZBufferParams);
     
-        float viewDepth = _ProjectionParams.x*(startView.z * endView.z) / lerp(endView.z, startView.z, search1);
-        float deltaDepth = viewDepth - fragDepth;
+        float testDepth = _ProjectionParams.x*(startView.z * endView.z) / lerp(endView.z, startView.z, search1);
+        float deltaDepth = testDepth - fragDepth;
     
-        if (deltaDepth > 0 && deltaDepth < thickness*0.1f)
+        
+        if(abs(deltaDepth) < thickness*0.1f)
         {
             hit1 = 1;
-            search1 = search0 + ((search1 - search0) / 2);
             break;
+        }
+        if (deltaDepth > 0)
+        {
+            search1 = search0 + ((search1 - search0) / 2);
         }
         else
         {
