@@ -36,11 +36,11 @@ Shader "ScreenSpaceReflectionShader"
     float _ReflectionJitter;
     float _BlurSize;
     float _LuminanceCloseOpThreshold;
+    int _HizMapMipCount;
 
     #include "FullScreen.hlsl"
-    #include "ScreenSpaceReflection.hlsl"
-    #include "GaussianBlur.hlsl"
-    #include "CombineColor.hlsl"
+    #include "HiZSSR.hlsl"
+    // #include "ScreenSpaceReflection.hlsl"
     
     ENDHLSL
 
@@ -59,48 +59,9 @@ Shader "ScreenSpaceReflectionShader"
 
             HLSLPROGRAM
             #pragma vertex FullScreenVert
-            #pragma fragment EfficentSSR
+            #pragma fragment HiZSSR
             #pragma enable_d3d11_debug_symbols
             ENDHLSL
-        }
-        Pass
-        {
-            Name "SSRVerticalBlurPass"
-            ZTest Off
-            ZWrite Off
-            Cull Off
-            
-            HLSLPROGRAM
-            #pragma vertex VerticalBlurVert
-            #pragma fragment FragBlur
-            #pragma enable_d3d11_debug_symbols
-            ENDHLSL    
-        }
-        Pass
-        {
-            Name "SSRHorizontalBlurPass"
-            ZTest Off
-            ZWrite Off
-            Cull Off
-            
-            HLSLPROGRAM
-            #pragma vertex HorizontalBlurVert
-            #pragma fragment FragBlur
-            #pragma enable_d3d11_debug_symbols
-            ENDHLSL    
-        }
-        Pass
-        {
-            Name "CombineColorPass"
-            ZTest Off
-            ZWrite Off
-            Cull Off
-            
-            HLSLPROGRAM
-            #pragma vertex FullScreenVert
-            #pragma fragment CombineColor
-            #pragma enable_d3d11_debug_symbols
-            ENDHLSL    
         }
     }
 }

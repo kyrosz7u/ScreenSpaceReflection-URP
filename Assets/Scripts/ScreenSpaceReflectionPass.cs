@@ -86,23 +86,23 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
             (int)ScreenSpacePass.Reflection);
 
-        cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
-        cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
-            (int)ScreenSpacePass.VerticalBlur);
+        // cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
+        // cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+        // cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+        //     (int)ScreenSpacePass.VerticalBlur);
+        //     
+        // cmd.SetGlobalTexture("_MainTex", m_EvenBuffer);
+        // cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+        // cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+        //     (int)ScreenSpacePass.HorizontalBlur);
+        //     
+        // cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
+        // cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
+        // cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
+        //     (int)ScreenSpacePass.Composite);
             
-        cmd.SetGlobalTexture("_MainTex", m_EvenBuffer);
-        cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
-            (int)ScreenSpacePass.HorizontalBlur);
-            
-        cmd.SetGlobalTexture("_MainTex", m_OddBuffer);
-        cmd.SetRenderTarget(m_EvenBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
-            (int)ScreenSpacePass.Composite);
-            
-        cmd.Blit(m_EvenBuffer, m_RenderTarget);
-
+        cmd.Blit(m_OddBuffer, m_RenderTarget);
+        cmd.SetRenderTarget(m_Renderer.cameraColorTarget, m_Renderer.cameraDepthTarget);
         context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
     }

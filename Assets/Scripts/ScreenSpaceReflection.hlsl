@@ -1,11 +1,15 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
-#include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
-float LoadHiZDepth(uint2 uv, int mipLevel = 0)
+float SamplerHiZDepth(float2 uv, int mipLevel = 0)
 {
-    return LOAD_TEXTURE2D_X(_HizMap, uv).r;
+    return SAMPLE_TEXTURE2D_LOD(_HizMap, sampler_HizMap, uv, mipLevel).r;
+}
+
+float LoadHiZDepth(uint2 frag, int mipLevel = 0)
+{
+    return LOAD_TEXTURE2D_LOD(_HizMap, frag, mipLevel).r;
 }
 
 float4 RawSSR(Varyings input) : SV_Target
@@ -19,10 +23,10 @@ float4 RawSSR(Varyings input) : SV_Target
 
     // 获取相机空间坐标
     #if UNITY_REVERSED_Z
-    float depth = SampleSceneDepth(uv);
+    float depth = SamplerHiZDepth(uv);
     #else
         // 调整 z 以匹配 OpenGL 的 NDC
-        float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(UV));
+        float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(uv));
     #endif
 
     uv.y = 1.0 - uv.y;
@@ -52,7 +56,7 @@ float4 RawSSR(Varyings input) : SV_Target
 
         if (reflUV.x < 0.0 || reflUV.y < 0.0 || reflUV.x > 1.0 || reflUV.y > 1.0) break;
 
-        float screenDepth = SampleSceneDepth(reflUV);
+        float screenDepth = SamplerHiZDepth(reflUV);
         float ViewDepth = LinearEyeDepth(screenDepth, _ZBufferParams);
 
         if (reflDepth > ViewDepth && abs(reflDepth - ViewDepth) < 0.01)
@@ -68,20 +72,26 @@ float4 EfficentSSR(Varyings input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     float2 uv = input.uv;
-    uv.y = 1.0 - uv.y;
+    if(_ProjectionParams.x<0)
+    {
+        uv.y = 1.0 - uv.y;
+    }
     float4 color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, uv);
     float3 normal = SampleSceneNormals(uv);
     float2 texSize = ceil(_ScreenParams.xy);
 
     // Get camera space position
 #if UNITY_REVERSED_Z
-    float depth = SampleSceneDepth(uv);
+    float depth = SamplerHiZDepth(uv);
 #else
     // Adjust z to match OpenGL's NDC
-    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(UV));
+    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(uv));
 #endif
 
-    uv.y = 1.0 - uv.y;
+    if(_ProjectionParams.x<0)
+    {
+        uv.y = 1.0 - uv.y;
+    }
     float4 NdcPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
     NdcPos = mul(UNITY_MATRIX_I_P, NdcPos);
     NdcPos /= NdcPos.w;
@@ -137,16 +147,16 @@ float4 EfficentSSR(Varyings input) : SV_Target
     
     float2 frag = startFrag;
     frag += increment*_ReflectionJitter;
-    int i;
+    int mipLevel = 0;
 
-    UNITY_LOOP
-    for (i = 0; i < int(delta); ++i)
+    int i = 0;
+    while (i < int(delta))
     {
         if(frag.x < 0.0 || frag.y < 0.0 || frag.x >= texSize.x || frag.y >= texSize.y) break;
 
         float2 fragCenter = floor(frag)+0.5;
         
-        float fragDepth = LinearEyeDepth(LoadHiZDepth(fragCenter), _ZBufferParams);
+        float fragDepth = LinearEyeDepth(SamplerHiZDepth(fragCenter/texSize, mipLevel), _ZBufferParams);
         
         search1 = lerp((fragCenter.y - startFrag.y) / deltaY, (fragCenter.x - startFrag.x) / deltaX, useX);
         search1 = clamp(search1, 0.0, 1.0);
@@ -165,6 +175,12 @@ float4 EfficentSSR(Varyings input) : SV_Target
     }
 
     search1 = search0 + ((search1 - search0) / 2.0);
+
+    int hitLevel = 0;
+    while(hitLevel < _HizMapMipCount)
+    {
+        
+    }
     
     float steps = _MaxSteps * hit0;
     UNITY_LOOP
@@ -203,6 +219,6 @@ float4 EfficentSSR(Varyings input) : SV_Target
         reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, fragUV);
     }
 
-    return float4(reflColor.rgb, 1.0f);
+    return float4(color.rgb+reflColor.rgb, 1.0f);
 }
 
