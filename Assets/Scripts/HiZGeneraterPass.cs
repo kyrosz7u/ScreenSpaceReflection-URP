@@ -59,6 +59,7 @@ namespace UnityTemplateProjects
             
             hizMap = RenderTexture.GetTemporary(hizMapDesc);
             hizMap.filterMode = FilterMode.Point;
+            hizMap.name = "HizMap";
             hizMap.Create();
             
             cmd.Blit(m_DepthTexture, hizMap);

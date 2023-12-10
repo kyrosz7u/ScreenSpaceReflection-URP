@@ -15,7 +15,7 @@ MonoBehaviour:
   m_Active: 1
   settings:
     Event: 500
-    MaxSteps: 20.13
+    MaxSteps: 100
     MaxDistance: 1
     Thickness: 0.2
     ReflectionStride: 0.705
