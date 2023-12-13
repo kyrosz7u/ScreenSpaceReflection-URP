@@ -11,12 +11,12 @@ float LoadHiZDepth(uint2 frag, int mipLevel = 0)
     return LOAD_TEXTURE2D_X_LOD(_HizMap, frag, mipLevel).r;
 }
 
-float2 GetHizMapSize(int mipLevel)
+int GetHizMapSize(int mipLevel)
 {
     return int2(_ScreenParams.xy) >> mipLevel;
 }
 
-float2 GetPixelIndexInHizMap(float2 uv, int mipLevel)
+int GetPixelIndexInHizMap(float2 uv, int mipLevel)
 {
     return floor(uv * GetHizMapSize(mipLevel));
 }
@@ -68,18 +68,18 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
 
 
 // return next pixel position in TS
-float3 MoveToNextPixel(float3 startPosInTS, float2 curPixel, float3 reflDirInTS, int mipLevel)
+float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, int mipLevel)
 {
-    float2 increment;
+    int2 increment;
 
     increment.x = reflDirInTS.x > 0 ? 1.0f : -1.0f;
     increment.y = reflDirInTS.y > 0 ? 1.0f : -1.0f;
 
-    float2 HizMapSize = GetHizMapSize(mipLevel);
+    int2 HizMapSize = GetHizMapSize(mipLevel);
     
-    float2 nextPixel = curPixel + increment;
-    float2 nextUV = nextPixel / HizMapSize;
-    nextUV += increment / HizMapSize / 128.0f;
+    int2 nextPixel = curPixel + increment;
+    float2 nextUV = (float2)nextPixel / HizMapSize;
+    nextUV += (float2)increment / HizMapSize / 128.0f;
 
     float2 delta = nextUV - startPosInTS.xy;
     delta /= reflDirInTS.xy;
@@ -96,16 +96,66 @@ float FindIntersection_Hiz(float3 startPosInTS,
 {
     float StartZ = startPosInTS.z;
     float EndZ = StartZ + reflDirInTS.z * maxTraceDistance;
-
-    bool isBackward = EndZ < StartZ;
+    
+    int zDirection = EndZ > StartZ ? 1 : -1;
 
     int endLevel = 0;
     int curLevel = 2;
-    float2 startPixel = GetPixelIndexInHizMap(startPosInTS.xy, curLevel);
-    float3 nextPixelPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, curLevel);
+    int2 startPixel = GetPixelIndexInHizMap(startPosInTS.xy, curLevel);
+    float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, curLevel);
     int i = 0;
     
-    while(curLevel>=0 )
+    while(curLevel>=0 && curRayPosInTS.z*zDirection < EndZ*zDirection)
+    {
+        int2 curPixel = GetPixelIndexInHizMap(curRayPosInTS.xy, curLevel);
+        float minDepth = LoadHiZDepth(curPixel, curLevel);
+
+        // 测试是否相交
+        float3 tmpRayPosInTS = GetRayPosInTS(curRayPosInTS, reflDirInTS, minDepth - StartZ);
+        int2 tmpPixel = GetPixelIndexInHizMap(tmpRayPosInTS.xy, curLevel);
+
+        bool isAcross = false;
+        
+        if(tmpPixel == curPixel)
+        {
+            curRayPosInTS = tmpRayPosInTS;
+        }
+        else
+        {
+            #if UNITY_REVERSED_Z
+            if(zDirection > 0)
+            {
+                isAcross = minDepth < curRayPosInTS.z;
+            }
+            else
+            {
+                isAcross = minDepth < curRayPosInTS.z;
+            }
+            #else
+            if(zDirection > 0)
+            {
+                isAcross = minDepth > curRayPosInTS.z;
+            }
+            else
+            {
+                isAcross = minDepth > curRayPosInTS.z;
+            }
+            #endif
+        }
+
+        if(isAcross)
+        {
+            curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, curLevel);
+            curLevel++;
+        }
+        else
+        {
+            curRayPosInTS = tmpRayPosInTS;
+            curLevel--;
+        }
+
+        i++;
+    }
     
 }
 
