@@ -105,10 +105,16 @@ float FindIntersection_Hiz(float3 startPosInTS,
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, curLevel);
     int i = 0;
     
-    while(curLevel>=0 && curRayPosInTS.z*zDirection < EndZ*zDirection)
+    while(curLevel>=0 && curRayPosInTS.z*zDirection < EndZ*zDirection && i<_MaxSteps)
     {
         int2 curPixel = GetPixelIndexInHizMap(curRayPosInTS.xy, curLevel);
-        float minDepth = LoadHiZDepth(curPixel, curLevel);
+        float2 sampleUV = curRayPosInTS.xy;
+        if (_ProjectionParams.x < 0)
+        {
+            sampleUV.y = 1.0f - sampleUV.y;
+        }
+        float2 samplePixel = sampleUV * GetHizMapSize(curLevel);
+        float minDepth = LoadHiZDepth(samplePixel, curLevel);
 
         // 测试是否相交
         float3 tmpRayPosInTS = GetRayPosInTS(curRayPosInTS, reflDirInTS, minDepth - StartZ);
@@ -116,16 +122,16 @@ float FindIntersection_Hiz(float3 startPosInTS,
 
         bool isAcross = false;
         
-        if(tmpPixel == curPixel)
+        if(tmpPixel.x == curPixel.x && tmpPixel.y == curPixel.y)
         {
             curRayPosInTS = tmpRayPosInTS;
         }
         else
         {
             #if UNITY_REVERSED_Z
-            if(zDirection > 0)
+            if(zDirection < 0.0f)
             {
-                isAcross = minDepth < curRayPosInTS.z;
+                isAcross = minDepth < curRayPosInTS.z || (curLevel == 0 && minDepth - curRayPosInTS.z > _Thickness);
             }
             else
             {
@@ -156,7 +162,12 @@ float FindIntersection_Hiz(float3 startPosInTS,
 
         i++;
     }
-    
+
+    bool isHit = curLevel < 0 && curRayPosInTS.z*zDirection < EndZ*zDirection;
+
+    outHitPosInTS = isHit ? curRayPosInTS : startPosInTS;
+
+    return isHit ? length(curRayPosInTS - startPosInTS) : 0.0f;
 }
 
 
@@ -241,7 +252,7 @@ float4 HiZSSR(Varyings input) : SV_Target
 
     ComputePosAndReflection(depth, sampleUV, normal, samplePosInTS, reflDirInTS, maxDepth);
 
-    float pos = FindIntersection_Linear(samplePosInTS, reflDirInTS, maxDepth, samplePosInTS);
+    float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxDepth, samplePosInTS);
 
     samplePosInTS.y = 1.0 - samplePosInTS.y;
     float4 reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, samplePosInTS.xy);
