@@ -11,19 +11,19 @@ float LoadHiZDepth(uint2 frag, int mipLevel = 0)
     return LOAD_TEXTURE2D_X_LOD(_HizMap, frag, mipLevel).r;
 }
 
-int GetHizMapSize(int mipLevel)
+int2 GetHizMapSize(int mipLevel)
 {
-    return int2(_ScreenParams.xy) >> mipLevel;
+    return int2((int)_ScreenParams.x >> mipLevel, (int)_ScreenParams.y >> mipLevel);
 }
 
-int GetPixelIndexInHizMap(float2 uv, int mipLevel)
+int2 GetPixelIndexInHizMap(float2 uv, int mipLevel)
 {
     return floor(uv * GetHizMapSize(mipLevel));
 }
 
-float3 GetRayPosInTS(float3 o, float3 dir, float depth)
+float3 GetRayPosInTS(float3 o, float3 dir, float len)
 {
-    return o + dir * depth;
+    return o + dir * len;
 }
 
 void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 outSamplePosInTS,
@@ -84,7 +84,7 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     float2 delta = nextUV - startPosInTS.xy;
     delta /= reflDirInTS.xy;
 
-    float len = min(delta.x, delta.y);
+    float len = min(abs(delta.x), abs(delta.y));
     
     return GetRayPosInTS(startPosInTS, reflDirInTS, len);
 }
@@ -96,11 +96,12 @@ float FindIntersection_Hiz(float3 startPosInTS,
 {
     float StartZ = startPosInTS.z;
     float EndZ = StartZ + reflDirInTS.z * maxTraceDistance;
+    float DeltaZ = EndZ - StartZ;
     
     int zDirection = EndZ > StartZ ? 1 : -1;
 
     int endLevel = 0;
-    int curLevel = 2;
+    int curLevel = 0;
     int2 startPixel = GetPixelIndexInHizMap(startPosInTS.xy, curLevel);
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, curLevel);
     int i = 0;
@@ -109,34 +110,30 @@ float FindIntersection_Hiz(float3 startPosInTS,
     {
         int2 curPixel = GetPixelIndexInHizMap(curRayPosInTS.xy, curLevel);
         float2 sampleUV = curRayPosInTS.xy;
+        if(sampleUV.x < 0 || sampleUV.x > 1 || sampleUV.y < 0 || sampleUV.y > 1)
+        {
+            break;
+        }
         if (_ProjectionParams.x < 0)
         {
             sampleUV.y = 1.0f - sampleUV.y;
         }
-        float2 samplePixel = sampleUV * GetHizMapSize(curLevel);
-        float minDepth = LoadHiZDepth(samplePixel, curLevel);
+        float minDepth = SamplerHiZDepth(sampleUV, curLevel);
 
         // 测试是否相交
-        float3 tmpRayPosInTS = GetRayPosInTS(curRayPosInTS, reflDirInTS, minDepth - StartZ);
+        float3 tmpRayPosInTS = (minDepth<curRayPosInTS.z)?GetRayPosInTS(curRayPosInTS, reflDirInTS, (minDepth - curRayPosInTS.z)/DeltaZ):curRayPosInTS;
         int2 tmpPixel = GetPixelIndexInHizMap(tmpRayPosInTS.xy, curLevel);
 
         bool isAcross = false;
         
         if(tmpPixel.x == curPixel.x && tmpPixel.y == curPixel.y)
         {
-            curRayPosInTS = tmpRayPosInTS;
+            isAcross = curLevel == 0 && tmpRayPosInTS.z > _Thickness * minDepth && minDepth - tmpRayPosInTS.z > _Thickness * minDepth;
         }
         else
         {
             #if UNITY_REVERSED_Z
-            if(zDirection < 0.0f)
-            {
-                isAcross = minDepth < curRayPosInTS.z || (curLevel == 0 && minDepth - curRayPosInTS.z > _Thickness);
-            }
-            else
-            {
-                isAcross = minDepth < curRayPosInTS.z;
-            }
+            isAcross = true;
             #else
             if(zDirection > 0)
             {
@@ -152,7 +149,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
         if(isAcross)
         {
             curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, curLevel);
-            curLevel++;
+            curLevel = min(8, curLevel + 1);
         }
         else
         {
@@ -167,7 +164,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
 
     outHitPosInTS = isHit ? curRayPosInTS : startPosInTS;
 
-    return isHit ? length(curRayPosInTS - startPosInTS) : 0.0f;
+    return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
 }
 
 
@@ -189,8 +186,16 @@ float FindIntersection_Linear(float3 startPosInTS,
 
     for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
     {
-        curPosInTS += dp;
+        // curPosInTS += dp;
+        int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
+        curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, 0);
+
+        if(curPosInTS.x < 0 || curPosInTS.x > 1 || curPosInTS.y < 0 || curPosInTS.y > 1)
+        {
+            break;
+        }
         float2 sampleUV = curPosInTS.xy;
+        
         if (_ProjectionParams.x < 0)
         {
             sampleUV.y = 1.0f - sampleUV.y;
@@ -248,11 +253,11 @@ float4 HiZSSR(Varyings input) : SV_Target
 
     float3 samplePosInTS;
     float3 reflDirInTS;
-    float maxDepth;
+    float maxLength;
 
-    ComputePosAndReflection(depth, sampleUV, normal, samplePosInTS, reflDirInTS, maxDepth);
+    ComputePosAndReflection(depth, sampleUV, normal, samplePosInTS, reflDirInTS, maxLength);
 
-    float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxDepth, samplePosInTS);
+    float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, samplePosInTS);
 
     samplePosInTS.y = 1.0 - samplePosInTS.y;
     float4 reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, samplePosInTS.xy);
