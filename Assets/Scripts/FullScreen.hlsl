@@ -15,7 +15,7 @@
     #endif
 
     #if UNITY_UV_STARTS_AT_TOP
-    // output.positionCS.y *= _ScaleBiasRt.x;
+    output.positionCS.y *= _ScaleBiasRt.x;
     #endif
     
     return output;
