@@ -29,22 +29,21 @@ float3 GetRayPosInTS(float3 o, float3 dir, float len)
 void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 outSamplePosInTS,
                              out float3 outReflDirInTS, out float outMaxLength)
 {
-    float4 ViewPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
+    float4 ClipPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
     #if UNITY_UV_STARTS_AT_TOP
-        float y = 1.0f - uv.y;
-        ViewPos.y = 2.0f*y - 1.0f;
+    float y = 1.0f - uv.y;
+    ClipPos.y = 2.0f*y - 1.0f;
     #endif
-    ViewPos = mul(UNITY_MATRIX_I_P, ViewPos);
-    ViewPos /= ViewPos.w;
-    float3 viewPos = ViewPos.xyz;
+    ClipPos = mul(UNITY_MATRIX_I_P, ClipPos);
+    ClipPos /= ClipPos.w;
+    float3 viewPos = ClipPos.xyz;
 
     // In view space
-    float3 viewDir = normalize(viewPos);
+    float3 viewDir = normalize(viewPos.xyz);
     // view transform don't have scale, so that V_IT = V
     float3 normalVS = normalize(mul(UNITY_MATRIX_V, normal).xyz);
     float3 reflectDir = normalize(reflect(viewDir, normalVS));
 
-    // Clip to the near plane
     float rayLength = (_ProjectionParams.x * (viewPos.z + reflectDir.z * _MaxDistance) < _ProjectionParams.y)
                           ? (_ProjectionParams.y - _ProjectionParams.x * viewPos.z) / reflectDir.z * _ProjectionParams.x
                           : _MaxDistance;
@@ -52,14 +51,13 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
     float3 endPosInVS = viewPos + reflectDir * rayLength;
     float4 endPosInTS = mul(UNITY_MATRIX_P, float4(endPosInVS, 1.0f));
     endPosInTS /= endPosInTS.w;
-    endPosInTS.xy = endPosInTS.xy * 0.5f + 0.5f;
     #if UNITY_UV_STARTS_AT_TOP
-        // endPosInTS.y = 1.0f - endPosInTS.y;
+    endPosInTS.y = -endPosInTS.y;
     #endif
+    endPosInTS.xy = endPosInTS.xy * 0.5f + 0.5f;
 
     outSamplePosInTS = float3(uv, depth);
     outReflDirInTS = normalize(endPosInTS.xyz - outSamplePosInTS);
-
     outMaxLength = outReflDirInTS.x > 0
                        ? (1.0f - outSamplePosInTS.x) / outReflDirInTS.x
                        : -outSamplePosInTS.x / outReflDirInTS.x;
@@ -108,7 +106,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
     int zDirection = EndZ > StartZ ? 1 : -1;
 
     int endLevel = 0;
-    int curLevel = 0;
+    int curLevel = 1;
     int2 startPixel = GetPixelIndexInHizMap(startPosInTS.xy, curLevel);
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, curLevel);
     int i = 0;
@@ -121,10 +119,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
         {
             break;
         }
-        if (_ProjectionParams.x < 0)
-        {
-            sampleUV.y = 1.0f - sampleUV.y;
-        }
+
         float minDepth = SamplerHiZDepth(sampleUV, curLevel);
 
         // 测试是否相交
@@ -167,55 +162,50 @@ float FindIntersection_Hiz(float3 startPosInTS,
 }
 
 
-// float FindIntersection_Linear(float3 startPosInTS,
-//                               float3 reflDirInTS,
-//                               float maxTraceDistance,
-//                               out float3 outHitPosInTS)
-// {
-//     float3 endPosInTS = startPosInTS + reflDirInTS * maxTraceDistance;
-//
-//     float3 dp = endPosInTS - startPosInTS;
-//     int2 dp2 = int2(dp.xy * GetHizMapSize(0));
-//     uint maxDist = max(abs(dp2.x), abs(dp2.y));
-//     dp = dp / max(maxDist, 1);
-//
-//     float3 curPosInTS = startPosInTS;
-//     outHitPosInTS = startPosInTS;
-//     bool isHit = false;
-//
-//     for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
-//     {
-//         // curPosInTS += dp;
-//         int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
-//         curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, 0);
-//
-//         if(curPosInTS.x < 0 || curPosInTS.x > 1 || curPosInTS.y < 0 || curPosInTS.y > 1)
-//         {
-//             break;
-//         }
-//         float2 sampleUV = curPosInTS.xy;
-//         
-//         if (_ProjectionParams.x < 0)
-//         {
-//             sampleUV.y = 1.0f - sampleUV.y;
-//         }
-//         #if UNITY_REVERSED_Z
-//         float curDepth = SamplerHiZDepth(sampleUV, 0);
-//         #else
-//         float curDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
-//         #endif
-//
-//         if (curPosInTS.z < curDepth && curPosInTS.z > _Thickness * curDepth && curDepth - curPosInTS.z < _Thickness *
-//             curDepth)
-//         {
-//             outHitPosInTS = curPosInTS;
-//             isHit = true;
-//             break;
-//         }
-//     }
-//
-//     return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
-// }
+float FindIntersection_Linear(float3 startPosInTS,
+                              float3 reflDirInTS,
+                              float maxTraceDistance,
+                              out float3 outHitPosInTS)
+{
+    float3 endPosInTS = startPosInTS + reflDirInTS * maxTraceDistance;
+
+    float3 dp = endPosInTS - startPosInTS;
+    int2 dp2 = int2(dp.xy * GetHizMapSize(0));
+    uint maxDist = max(abs(dp2.x), abs(dp2.y));
+    dp = dp / max(maxDist, 1);
+
+    float3 curPosInTS = startPosInTS;
+    outHitPosInTS = startPosInTS;
+    bool isHit = false;
+
+    for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
+    {
+        // curPosInTS += dp;
+        int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
+        curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, 0);
+
+        if(curPosInTS.x < 0 || curPosInTS.x > 1 || curPosInTS.y < 0 || curPosInTS.y > 1)
+        {
+            break;
+        }
+        
+        #if UNITY_REVERSED_Z
+        float curDepth = SamplerHiZDepth(curPosInTS.xy, 0);
+        #else
+        float curDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
+        #endif
+
+        if (curPosInTS.z < curDepth && curPosInTS.z > _Thickness * curDepth && curDepth - curPosInTS.z < _Thickness *
+            curDepth)
+        {
+            outHitPosInTS = curPosInTS;
+            isHit = true;
+            break;
+        }
+    }
+
+    return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
+}
 
 
 float4 HiZSSR(Varyings input) : SV_Target
@@ -225,84 +215,24 @@ float4 HiZSSR(Varyings input) : SV_Target
     float depth;
     float3 normal;
     float4 color;
+    
+    color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, sampleUV);
+    #if UNITY_REVERSED_Z
+    depth = SamplerHiZDepth(sampleUV, 0);
+    #else
+    depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
+    #endif
+    normal = SampleSceneNormals(sampleUV);
 
-    // DX和Metal的Y轴方向相反，Unity中会自动处理统一到与OpenGL一致，但是在采样时需要注意
-    // if (_ProjectionParams.x < 0)
-    // {
-    //     sampleUV.y = 1.0 - sampleUV.y;
-    //     color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, sampleUV);
-    //     #if UNITY_REVERSED_Z
-    //     depth = SamplerHiZDepth(sampleUV, 0);
-    //     #else
-    //     depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
-    //     #endif
-    //     normal = SampleSceneNormals(sampleUV);
-    //     sampleUV.y = 1.0 - sampleUV.y;
-    // }
-    // else
-    // {
-        color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, sampleUV);
-        #if UNITY_REVERSED_Z
-        depth = SamplerHiZDepth(sampleUV, 0);
-        #else
-        depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
-        #endif
-        normal = SampleSceneNormals(sampleUV);
-    // }
 
     float3 samplePosInTS;
     float3 reflDirInTS;
     float maxLength;
 
-    // ComputePosAndReflection(depth, input.uv, normal, samplePosInTS, reflDirInTS, maxLength);
-
-    float4 ClipPos = float4(input.uv * 2.0f - 1.0f, depth, 1.0f);
-    #if UNITY_UV_STARTS_AT_TOP
-    float y = 1.0f - input.uv.y;
-    ClipPos.y = 2.0f*y - 1.0f;
-    #endif
-    ClipPos = mul(UNITY_MATRIX_I_P, ClipPos);
-    ClipPos /= ClipPos.w;
-    float3 viewPos = ClipPos.xyz;
-
-    // In view space
-    float3 viewDir = normalize(viewPos.xyz);
-    // view transform don't have scale, so that V_IT = V
-    float3 normalVS = normalize(mul(UNITY_MATRIX_V, normal).xyz);
-    float3 reflectDir = normalize(reflect(viewDir, normalVS));
-
-    float rayLength = (_ProjectionParams.x * (viewPos.z + reflectDir.z * _MaxDistance) < _ProjectionParams.y)
-                          ? (_ProjectionParams.y - _ProjectionParams.x * viewPos.z) / reflectDir.z * _ProjectionParams.x
-                          : _MaxDistance;
-
-    float3 endPosInVS = viewPos + reflectDir * rayLength;
-    float4 endPosInTS = mul(UNITY_MATRIX_P, float4(endPosInVS, 1.0f));
-    endPosInTS /= endPosInTS.w;
-    #if UNITY_UV_STARTS_AT_TOP
-    endPosInTS.y = -endPosInTS.y;
-    #endif
-    endPosInTS.xy = endPosInTS.xy * 0.5f + 0.5f;
-
-    float3 outSamplePosInTS = float3(input.uv, depth);
-    float3 outReflDirInTS = normalize(endPosInTS.xyz - outSamplePosInTS);
-
-    float outMaxLength = outReflDirInTS.x > 0
-                       ? (1.0f - outSamplePosInTS.x) / outReflDirInTS.x
-                       : -outSamplePosInTS.x / outReflDirInTS.x;
-    outMaxLength = min(outMaxLength,
-                       outReflDirInTS.y > 0
-                           ? (1.0f - outSamplePosInTS.y) / outReflDirInTS.y
-                           : -outSamplePosInTS.y / outReflDirInTS.y);
-    outMaxLength = min(outMaxLength,
-                       outReflDirInTS.z > 0
-                           ? (1.0f - outSamplePosInTS.z) / outReflDirInTS.z
-                           : -outSamplePosInTS.z / outReflDirInTS.z);
-
-    return float4(outSamplePosInTS+outReflDirInTS*outMaxLength, 1.0f);
+    ComputePosAndReflection(depth, input.uv, normal, samplePosInTS, reflDirInTS, maxLength);
 
     float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, samplePosInTS);
 
-    // samplePosInTS.y = 1.0 - samplePosInTS.y;
     float4 reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, samplePosInTS.xy);
     reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? 1.0f : 0.0f);
 

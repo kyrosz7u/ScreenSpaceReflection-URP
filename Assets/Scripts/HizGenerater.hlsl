@@ -12,7 +12,7 @@ Varyings FullScreenVert(Attributes input)
     output.positionCS = input.positionOS;
     output.uv = input.uv;
     # if UNITY_UV_STARTS_AT_TOP
-    output.uv.y = 1-output.uv.y;
+    output.positionCS.y = -output.positionCS.y;
     # endif
     
     #endif
