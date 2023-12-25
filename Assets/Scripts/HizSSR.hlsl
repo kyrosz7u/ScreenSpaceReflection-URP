@@ -278,12 +278,27 @@ float4 HiZSSR(Varyings input) : SV_Target
     float3 endPosInVS = viewPos + reflectDir * rayLength;
     float4 endPosInTS = mul(UNITY_MATRIX_P, float4(endPosInVS, 1.0f));
     endPosInTS /= endPosInTS.w;
-    endPosInTS.xy = endPosInTS.xy * 0.5f + 0.5f;
     #if UNITY_UV_STARTS_AT_TOP
-    // endPosInTS.y = 1.0f - endPosInTS.y;
+    endPosInTS.y = -endPosInTS.y;
     #endif
+    endPosInTS.xy = endPosInTS.xy * 0.5f + 0.5f;
 
-    return float4(endPosInTS);
+    float3 outSamplePosInTS = float3(input.uv, depth);
+    float3 outReflDirInTS = normalize(endPosInTS.xyz - outSamplePosInTS);
+
+    float outMaxLength = outReflDirInTS.x > 0
+                       ? (1.0f - outSamplePosInTS.x) / outReflDirInTS.x
+                       : -outSamplePosInTS.x / outReflDirInTS.x;
+    outMaxLength = min(outMaxLength,
+                       outReflDirInTS.y > 0
+                           ? (1.0f - outSamplePosInTS.y) / outReflDirInTS.y
+                           : -outSamplePosInTS.y / outReflDirInTS.y);
+    outMaxLength = min(outMaxLength,
+                       outReflDirInTS.z > 0
+                           ? (1.0f - outSamplePosInTS.z) / outReflDirInTS.z
+                           : -outSamplePosInTS.z / outReflDirInTS.z);
+
+    return float4(outSamplePosInTS+outReflDirInTS*outMaxLength, 1.0f);
 
     float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, samplePosInTS);
 
