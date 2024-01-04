@@ -164,7 +164,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
             else
             {
                 curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
-                curLevel = min(curLevel+1, 8);
+                curLevel = min(curLevel+1, 4);
             }
         }
 
