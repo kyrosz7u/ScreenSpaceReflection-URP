@@ -80,8 +80,13 @@ namespace UnityTemplateProjects
                 
                 cmd.SetGlobalTexture(m_DeepMipMapID, tmpTex);
                 
-                cmd.SetGlobalFloat("_SrcWidthInv", 0.5f / srcWidth);
-                cmd.SetGlobalFloat("_SrcHeightInv", 0.5f / srcHeight);
+                // cmd.SetGlobalFloat("_SrcWidthInv", 0.5f / srcWidth);
+                // cmd.SetGlobalFloat("_SrcHeightInv", 0.5f / srcHeight);
+                
+                int halfWidth = srcWidth >> 1;
+                int halfHeight = srcHeight >> 1;
+                
+                cmd.SetGlobalVector("_HizParams", new Vector4(2.0f * halfWidth / srcWidth, 2.0f * halfHeight / srcHeight, 0.5f / halfWidth, 0.5f / halfHeight));
                 
                 cmd.SetRenderTarget(hizMap, i);
                 cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);

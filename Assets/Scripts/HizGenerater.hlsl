@@ -26,11 +26,14 @@ float HizGenerater(Varyings input) : SV_Target
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
     float2 uv = input.uv;
+
+    // correct uv
+    uv *= _HizParams.xy;
     
-    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_SrcWidthInv, -_SrcHeightInv)).r;
-    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_SrcWidthInv, _SrcHeightInv)).r;
-    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, -_SrcHeightInv)).r;
-    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_SrcWidthInv, _SrcHeightInv)).r;
+    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, -_HizParams.w)).r;
+    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, _HizParams.w)).r;
+    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, -_HizParams.w)).r;
+    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, _HizParams.w)).r;
 
     return max(max(max(depth0, depth1), depth2), depth3);
 }

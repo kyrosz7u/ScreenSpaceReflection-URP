@@ -22,9 +22,8 @@
 
     TEXTURE2D(_DeepMipMap);
     SAMPLER(sampler_DeepMipMap);
-    
-    float _SrcWidthInv;
-    float _SrcHeightInv;
+
+    float4 _HizParams;
 
     #include "HizGenerater.hlsl"
     
