@@ -86,7 +86,7 @@ namespace UnityTemplateProjects
                 int halfWidth = srcWidth >> 1;
                 int halfHeight = srcHeight >> 1;
                 
-                cmd.SetGlobalVector("_HizParams", new Vector4(2.0f * halfWidth / srcWidth, 2.0f * halfHeight / srcHeight, 0.5f / halfWidth, 0.5f / halfHeight));
+                cmd.SetGlobalVector("_HizParams", new Vector4(2.0f * halfWidth / srcWidth, 2.0f * halfHeight / srcHeight, 0.5f / srcWidth, 0.5f / srcHeight));
                 
                 cmd.SetRenderTarget(hizMap, i);
                 cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);

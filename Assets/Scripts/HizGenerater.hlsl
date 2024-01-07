@@ -29,11 +29,15 @@ float HizGenerater(Varyings input) : SV_Target
 
     // correct uv
     uv *= _HizParams.xy;
+    float2 uv0 = uv + float2(-_HizParams.z, -_HizParams.w);
+    float2 uv1 = uv + float2(_HizParams.z, -_HizParams.w);
+    float2 uv2 = uv + float2(-_HizParams.z, _HizParams.w);
+    float2 uv3 = uv + float2(_HizParams.z, _HizParams.w);
     
-    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, -_HizParams.w)).r;
-    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, _HizParams.w)).r;
-    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, -_HizParams.w)).r;
-    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, _HizParams.w)).r;
+    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv0).r;
+    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv1).r;
+    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv2).r;
+    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv3).r;
 
     return max(max(max(depth0, depth1), depth2), depth3);
 }

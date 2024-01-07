@@ -17,7 +17,7 @@ float LoadHiZDepth(uint2 frag, int mipLevel = 0)
 
 float2 GetHizMapSize(int mipLevel)
 {
-    return _ScreenParams.xy * pow(0.5f, mipLevel);
+    return float2(_ScreenParams.x * pow(0.5f, mipLevel), _ScreenParams.y * pow(0.5f, mipLevel));
 }
 
 int2 GetPixelIndex(float2 uv, float2 textureSize)
@@ -92,7 +92,7 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     int2 nextPixel = curPixel + increment;
     float2 nextUV = nextPixel / textureSize;
     float2 delta = nextUV - startPosInTS.xy;
-    float2 offset = increment * 0.001f;
+    float2 offset = saturate(increment * 0.00001f);
     // offset.y = 0.1f* offset.y;
     
     delta /= reflDirInTS.xy;
@@ -100,7 +100,7 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
 
     float3 nextPos = startPosInTS + len * reflDirInTS;
 
-    nextPos.xy += (delta.x < delta.y ? float2(offset.x, 0.0f) : float2(0.0f, offset.y));
+    // nextPos.xy += (delta.x < delta.y ? float2(offset.x, 0.0f) : float2(0.0f, offset.y));
     
     return nextPos;
 }
@@ -130,7 +130,6 @@ float FindIntersection_Hiz(float3 startPosInTS,
     int curLevel = 2;
     float2 startTextureSize = GetHizMapSize(curLevel);
     int2 startPixel = GetPixelIndex(startPosInTS.xy, startTextureSize);
-    float2 startOffsetSize = float2(1.0f / startTextureSize.x, 1.0f / startTextureSize.y);
     
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);
     int i = 0;
@@ -168,8 +167,10 @@ float FindIntersection_Hiz(float3 startPosInTS,
             }
             else
             {
+                
                 curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
-                curLevel = min(curLevel+1, _HizMapMipCount-1);
+                
+                curLevel = min(curLevel+1, 5-1);
             }
         }
 
