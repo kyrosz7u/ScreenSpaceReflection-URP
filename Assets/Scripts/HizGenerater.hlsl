@@ -25,6 +25,7 @@ float HizGenerater(Varyings input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
+    float4 minDepth;
     float2 uv = input.uv;
 
     // correct uv
@@ -34,12 +35,45 @@ float HizGenerater(Varyings input) : SV_Target
     float2 uv2 = uv + float2(-_HizParams.z, _HizParams.w);
     float2 uv3 = uv + float2(_HizParams.z, _HizParams.w);
     
-    float depth0 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv0).r;
-    float depth1 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv1).r;
-    float depth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv2).r;
-    float depth3 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv3).r;
+    minDepth.x = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv0).r;
+    minDepth.y = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv1).r;
+    minDepth.z = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv2).r;
+    minDepth.w = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv3).r;
+    
+    minDepth.xy = max(minDepth.xy, minDepth.zw);
+    minDepth.x = max(minDepth.x, minDepth.y);
 
-    return max(max(max(depth0, depth1), depth2), depth3);
+    return minDepth.x;
+
+    // return minDepth.x;
+
+    float4 addDepth = 0.0f;
+    if(_isWidthOdd == 1)
+    {
+        addDepth.x = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, -_HizParams.w)).r;
+        addDepth.y = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, _HizParams.w)).r;
+    }
+
+    if(_isHeightOdd == 1)
+    {
+        addDepth.w = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, 3.0f*_HizParams.w)).r;
+        addDepth.z = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, 3.0f*_HizParams.w)).r;
+    }
+
+    addDepth.xy = max(addDepth.xy, addDepth.zw);
+    addDepth.x = max(addDepth.x, addDepth.y);
+
+    float addDepth2 = 0.0f;
+    if(_isWidthOdd == 1 && _isHeightOdd == 1)
+    {
+        addDepth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, 3.0f*_HizParams.w)).r;
+    }
+
+    minDepth.x = max(minDepth.x, addDepth.x);
+    minDepth.x = max(minDepth.x, addDepth2);
+
+    // return 1.0f;
+    return minDepth.x;
 }
 
         

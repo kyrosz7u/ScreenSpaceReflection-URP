@@ -1,4 +1,4 @@
-﻿Shader "HiZGeneraterShader"
+﻿Shader "HiZGenerater"
 {
     HLSLINCLUDE
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -24,6 +24,8 @@
     SAMPLER(sampler_DeepMipMap);
 
     float4 _HizParams;
+    int _isWidthOdd;
+    int _isHeightOdd;
 
     #include "HizGenerater.hlsl"
     
@@ -40,7 +42,7 @@
             Name "HizGenerater"
             ZTest Off
             ZWrite Off
-            Cull Off
+            Cull Off 
 
             HLSLPROGRAM
             #pragma vertex FullScreenVert

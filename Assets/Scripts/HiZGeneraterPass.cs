@@ -21,7 +21,7 @@ namespace UnityTemplateProjects
         {
             this.renderPassEvent = renderPassEvent;
             m_Renderer = (UniversalRenderer)renderer;
-            m_Material = CoreUtils.CreateEngineMaterial("HiZGeneraterShader");
+            m_Material = CoreUtils.CreateEngineMaterial("HiZGenerater");
             ConfigureInput(ScriptableRenderPassInput.Depth);
         }
 
@@ -86,6 +86,8 @@ namespace UnityTemplateProjects
                 int halfWidth = srcWidth >> 1;
                 int halfHeight = srcHeight >> 1;
                 
+                cmd.SetGlobalInt("_isWidthOdd", srcWidth % 2 == 1 ? 1 : 0);
+                cmd.SetGlobalInt("_isHeightOdd", srcHeight % 2 == 1 ? 1 : 0);
                 cmd.SetGlobalVector("_HizParams", new Vector4(2.0f * halfWidth / srcWidth, 2.0f * halfHeight / srcHeight, 0.5f / srcWidth, 0.5f / srcHeight));
                 
                 cmd.SetRenderTarget(hizMap, i);
