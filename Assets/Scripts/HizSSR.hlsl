@@ -17,7 +17,7 @@ float LoadHiZDepth(uint2 frag, int mipLevel = 0)
 
 float2 GetHizMapSize(int mipLevel)
 {
-    return float2(_ScreenParams.x * pow(0.5f, mipLevel), _ScreenParams.y * pow(0.5f, mipLevel));
+    return floor(float2(_ScreenParams.x * pow(0.5f, mipLevel), _ScreenParams.y * pow(0.5f, mipLevel)));
 }
 
 int2 GetPixelIndex(float2 uv, float2 textureSize)
@@ -92,8 +92,8 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     int2 nextPixel = curPixel + increment;
     float2 nextUV = nextPixel / textureSize;
     float2 delta = nextUV - startPosInTS.xy;
-    // float2 offset = saturate(increment * 0.0001f);
-    float2 offset = increment * 0.000001f;
+    float2 offset = saturate(increment * 0.00001f);
+    // float2 offset = increment * 0.000001f;
     
     delta /= reflDirInTS.xy;
     float len = min(delta.x, delta.y);
@@ -110,6 +110,12 @@ float FindIntersection_Hiz(float3 startPosInTS,
                            float maxTraceDistance,
                            out float3 outHitPosInTS)
 {
+    int endLevel = 0;
+    int curLevel = 2;
+    float2 startTextureSize = GetHizMapSize(curLevel);
+
+    // startPosInTS.xy = floor(startPosInTS.xy*startTextureSize)/startTextureSize + 0.25/startTextureSize;
+    
     int2 increment;
     float3 EndPosInTS = startPosInTS + maxTraceDistance*reflDirInTS;
     float StartZ = startPosInTS.z;
@@ -124,9 +130,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
     
     int zDirection = EndZ > StartZ ? 1 : -1;
 
-    int endLevel = 0;
-    int curLevel = 2;
-    float2 startTextureSize = GetHizMapSize(curLevel);
+    
     int2 startPixel = GetPixelIndex(startPosInTS.xy, startTextureSize);
     
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);

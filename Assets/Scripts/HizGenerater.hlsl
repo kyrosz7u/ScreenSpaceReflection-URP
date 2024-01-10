@@ -37,37 +37,35 @@ float HizGenerater(Varyings input) : SV_Target
     minDepth.xy = max(minDepth.xy, minDepth.zw);
     minDepth.x = max(minDepth.x, minDepth.y);
 
-    return minDepth.x;
-
     // return minDepth.x;
 
-    // float4 addDepth = 0.0f;
-    // if(_isWidthOdd == 1)
-    // {
-    //     addDepth.x = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, -_HizParams.w)).r;
-    //     addDepth.y = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, _HizParams.w)).r;
-    // }
+    float4 addDepth = 0.0f;
+    if(_isWidthOdd == 1)
+    {
+        addDepth.x = LOAD_TEXTURE2D(_DeepMipMap, pixelIndex + float2(2.5f, 0.5f)).r;
+        addDepth.y = LOAD_TEXTURE2D(_DeepMipMap, pixelIndex + float2(2.5f, 1.5f)).r;
+    }
+    
+    if(_isHeightOdd == 1)
+    {
+        addDepth.z = LOAD_TEXTURE2D(_DeepMipMap, pixelIndex + float2(0.5f, 2.5f)).r;
+        addDepth.w = LOAD_TEXTURE2D(_DeepMipMap, pixelIndex + float2(1.5f, 2.5f)).r;
+    }
+    
+    addDepth.xy = max(addDepth.xy, addDepth.zw);
+    addDepth.x = max(addDepth.x, addDepth.y);
     //
-    // if(_isHeightOdd == 1)
-    // {
-    //     addDepth.w = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(-_HizParams.z, 3.0f*_HizParams.w)).r;
-    //     addDepth.z = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(_HizParams.z, 3.0f*_HizParams.w)).r;
-    // }
-    //
-    // addDepth.xy = max(addDepth.xy, addDepth.zw);
-    // addDepth.x = max(addDepth.x, addDepth.y);
-    //
-    // float addDepth2 = 0.0f;
-    // if(_isWidthOdd == 1 && _isHeightOdd == 1)
-    // {
-    //     addDepth2 = SAMPLE_TEXTURE2D(_DeepMipMap, sampler_DeepMipMap, uv + float2(3.0f*_HizParams.z, 3.0f*_HizParams.w)).r;
-    // }
-    //
-    // minDepth.x = max(minDepth.x, addDepth.x);
-    // minDepth.x = max(minDepth.x, addDepth2);
+    float addDepth2 = 0.0f;
+    if(_isWidthOdd == 1 && _isHeightOdd == 1)
+    {
+        addDepth2 = LOAD_TEXTURE2D(_DeepMipMap, pixelIndex + float2(2.5f, 2.5f)).r;
+    }
+    
+    minDepth.x = max(minDepth.x, addDepth.x);
+    minDepth.x = max(minDepth.x, addDepth2);
     //
     // // return 1.0f;
-    // return minDepth.x;
+    return minDepth.x;
 }
 
         
