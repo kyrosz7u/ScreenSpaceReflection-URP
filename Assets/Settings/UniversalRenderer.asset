@@ -35,7 +35,7 @@ MonoBehaviour:
   m_Name: HiZGeneraterFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  Event: 300
+  Event: 400
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

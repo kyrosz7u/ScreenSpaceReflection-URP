@@ -92,15 +92,15 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     int2 nextPixel = curPixel + increment;
     float2 nextUV = nextPixel / textureSize;
     float2 delta = nextUV - startPosInTS.xy;
-    float2 offset = saturate(increment * 0.00001f);
-    // offset.y = 0.1f* offset.y;
+    // float2 offset = saturate(increment * 0.0001f);
+    float2 offset = increment * 0.000001f;
     
     delta /= reflDirInTS.xy;
     float len = min(delta.x, delta.y);
 
     float3 nextPos = startPosInTS + len * reflDirInTS;
 
-    // nextPos.xy += (delta.x < delta.y ? float2(offset.x, 0.0f) : float2(0.0f, offset.y));
+    nextPos.xy += (delta.x < delta.y ? float2(offset.x, 0.0f) : float2(0.0f, offset.y));
     
     return nextPos;
 }
@@ -121,8 +121,6 @@ float FindIntersection_Hiz(float3 startPosInTS,
     
     increment.x = reflDirInTS.x >= 0 ? 1.0f : -1.0f;
     increment.y = reflDirInTS.y >= 0 ? 1.0f : -1.0f;
-
-    
     
     int zDirection = EndZ > StartZ ? 1 : -1;
 
@@ -162,15 +160,13 @@ float FindIntersection_Hiz(float3 startPosInTS,
                     curLevel--;
                     curRayPosInTS = tmpRay;
                 }
-                
-                
             }
             else
             {
                 
                 curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
                 
-                curLevel = min(curLevel+1, 5-1);
+                curLevel = min(curLevel+1, _HizMapMipCount-1);
             }
         }
 
@@ -242,7 +238,7 @@ float4 HiZSSR(Varyings input) : SV_Target
     #if UNITY_REVERSED_Z
     depth = SamplerHiZDepth(input.uv, 0);
     #else
-    depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
+    depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(input.uv, 0));
     #endif
     normal = SampleSceneNormals(input.uv);
 
