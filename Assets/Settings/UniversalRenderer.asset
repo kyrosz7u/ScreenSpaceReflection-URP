@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   settings:
-    Event: 500
+    Event: 400
     MaxSteps: 1000
     MaxDistance: 30.19
     Thickness: 0.0009
@@ -35,7 +35,8 @@ MonoBehaviour:
   m_Name: HiZGeneraterFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  Event: 400
+  HiZGeneraterShader: {fileID: 7200000, guid: 0570a63acc714b5bb0c18091d78389d2, type: 3}
+  Event: 450
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

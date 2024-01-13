@@ -1,6 +1,15 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
+struct StepState
+{
+    // InPixelSpace
+    float3 curRayPos;
+    int curLevel;
+    int2 curPixelSize;
+    int2 curPixelIndex;
+};
+
 float SamplerHiZDepth(float2 uv, int mipLevel = 0)
 {
     if(uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
@@ -20,9 +29,9 @@ float2 GetHizMapSize(int mipLevel)
     return floor(float2(_ScreenParams.x * pow(0.5f, mipLevel), _ScreenParams.y * pow(0.5f, mipLevel)));
 }
 
-int2 GetPixelIndex(float2 uv, float2 textureSize)
+int2 GetPixelIndex(float2 pixelPos, int mipLevel)
 {
-    return floor(uv * textureSize);
+    return floor(pixelPos / pow(2, mipLevel));
 }
 
 int2 GetPixelIndexInHizMap(float2 uv, int mipLevel)
@@ -87,101 +96,91 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
 
 
 // return next pixel position in TS
-float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, int2 increment, float2 textureSize)
+StepState MoveToNextPixel(float3 startPos, float3 reflDir, float2 mip0Size, int2 increment, StepState curState)
 {
-    int2 nextPixel = curPixel + increment;
-    float2 nextUV = nextPixel / textureSize;
-    float2 delta = nextUV - startPosInTS.xy;
-    float2 offset = saturate(increment * 0.00001f);
-    // float2 offset = increment * 0.000001f;
+    StepState nextState;
+    const int2 nextPixel = curState.curPixelIndex + increment;
+    const float2 nextPosInMip0 = (float2)nextPixel / curState.curPixelSize * mip0Size;
+    float2 delta = nextPosInMip0 - startPos.xy;
     
-    delta /= reflDirInTS.xy;
+    delta /= reflDir.xy;
     float len = min(delta.x, delta.y);
+    nextState.curRayPos = startPos + len * reflDir;
+    nextState.curLevel = curState.curLevel;
+    nextState.curPixelSize = curState.curPixelSize;
+    nextState.curPixelIndex = curState.curPixelIndex + (delta.x < delta.y ? int2(increment.x, 0) : int2(0, increment.y));
 
-    float3 nextPos = startPosInTS + len * reflDirInTS;
-
-    nextPos.xy += (delta.x < delta.y ? float2(offset.x, 0.0f) : float2(0.0f, offset.y));
-    
-    return nextPos;
+    return nextState;
 }
 
-float FindIntersection_Hiz(float3 startPosInTS,
+float FindIntersection_Hiz(float3 startPos,
                            float3 reflDirInTS,
                            float maxTraceDistance,
                            out float3 outHitPosInTS)
 {
-    int endLevel = 0;
-    int curLevel = 2;
-    float2 startTextureSize = GetHizMapSize(curLevel);
-
-    // startPosInTS.xy = floor(startPosInTS.xy*startTextureSize)/startTextureSize + 0.25/startTextureSize;
+    float3 v = maxTraceDistance*reflDirInTS;
+    float3 EndPos = startPos + v;
+    const float EndZ = EndPos.z;
+    const float DeltaZ = EndZ - startPos.z;
     
     int2 increment;
-    float3 EndPosInTS = startPosInTS + maxTraceDistance*reflDirInTS;
-    float StartZ = startPosInTS.z;
-    float EndZ = EndPosInTS.z;
-    float DeltaZ = EndZ - StartZ;
+    increment.x = v.x >= 0 ? 1.0f : -1.0f;
+    increment.y = v.y >= 0 ? 1.0f : -1.0f;
 
-    float3 v = reflDirInTS;
-    v /= v.z;
+    const float2 mip0Size = GetHizMapSize(0);
+    startPos.xy *= mip0Size;
+    EndPos.xy *= mip0Size;
+    v.xy = EndPos.xy - startPos.xy;
     
-    increment.x = reflDirInTS.x >= 0 ? 1.0f : -1.0f;
-    increment.y = reflDirInTS.y >= 0 ? 1.0f : -1.0f;
+    StepState curState;
+    curState.curRayPos.xy = startPos.xy;
+    curState.curRayPos.z = startPos.z;
+    curState.curLevel = 2;
+    curState.curPixelSize = GetHizMapSize(curState.curLevel);
+    curState.curPixelIndex = GetPixelIndex(startPos.xy, curState.curLevel);
     
-    int zDirection = EndZ > StartZ ? 1 : -1;
-
-    
-    int2 startPixel = GetPixelIndex(startPosInTS.xy, startTextureSize);
-    
-    float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);
+    curState = MoveToNextPixel(startPos, v, mip0Size, increment, curState);
     int i = 0;
     
-    while(curLevel>=0 && i<_MaxSteps)
+    while(curState.curLevel>=0 && curState.curRayPos.z > EndZ && i<_MaxSteps)
     {
-        if(curRayPosInTS.x < 0.0f || curRayPosInTS.x > 1.0f || curRayPosInTS.y < 0.0f || curRayPosInTS.y > 1.0f)
-        {
-            break;
-        }
+        float minDepth = LoadHiZDepth(curState.curPixelIndex, curState.curLevel);
         
-        float2 curTextureSize = GetHizMapSize(curLevel);
-        int2 curPixel = GetPixelIndex(curRayPosInTS.xy, curTextureSize);
-        float minDepth = SamplerHiZDepth(curRayPosInTS.xy, curLevel);
-
         // 由近平面到远平面
         if(DeltaZ < 0)
         {
-            float3 tmpRay = minDepth < curRayPosInTS.z ? curRayPosInTS + (minDepth - curRayPosInTS.z)*v : curRayPosInTS;
-            int2 nextPixel = GetPixelIndex(tmpRay.xy, curTextureSize);
+            curState.curPixelSize = GetHizMapSize(curState.curLevel);
+            curState.curPixelIndex = GetPixelIndex(curState.curRayPos.xy, curState.curLevel);
+            float3 tmpRay = minDepth < curState.curRayPos.z ? startPos + (minDepth - startPos.z)*v : curState.curRayPos;
+            int2 nextPixel = GetPixelIndex(tmpRay.xy, curState.curLevel);
 
-            if(IsPixelIndexEqual(curPixel,nextPixel))
+            if(IsPixelIndexEqual(curState.curPixelIndex, nextPixel))
             {
-                if(curLevel==0 && abs(minDepth - curRayPosInTS.z) > _Thickness)
+                if(curState.curLevel==0 && abs(minDepth - curState.curRayPos.z) > _Thickness)
                 {
-                    curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
+                    curState = MoveToNextPixel(startPos, v, mip0Size, increment, curState);
                 }
                 else
                 {
-                    curLevel--;
-                    curRayPosInTS = tmpRay;
+                    curState.curLevel--;
+                    curState.curRayPos = tmpRay;
                 }
             }
             else
             {
-                
-                curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
-                
-                curLevel = min(curLevel+1, _HizMapMipCount-1);
+                curState = MoveToNextPixel(startPos, v, mip0Size, increment, curState);
+                curState.curLevel = min(curState.curLevel+1, _HizMapMipCount-1);
             }
         }
 
         i++;
     }
 
-    bool isHit = curLevel < 0;
+    bool isHit = curState.curLevel < 0;
 
-    outHitPosInTS = isHit ? curRayPosInTS : startPosInTS;
+    outHitPosInTS = isHit ? curState.curRayPos : startPos;
 
-    return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
+    return isHit ? length(outHitPosInTS - startPos) : 0.0f;
 }
 
 
@@ -256,7 +255,7 @@ float4 HiZSSR(Varyings input) : SV_Target
 
     float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, hitPosInTS);
 
-    float4 reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, hitPosInTS.xy);
+    float4 reflColor = LOAD_TEXTURE2D_X(_CameraColorTexture, floor(hitPosInTS.xy));
     reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? 1.0f : 0.0f);
 
     return float4(color.rgb + reflColor.rgb, color.a);

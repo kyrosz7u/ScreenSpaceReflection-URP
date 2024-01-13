@@ -1,0 +1,58 @@
+﻿#pragma kernel HizGenCS KERNEL_SIZE = 8
+#pragma enable_d3d11_debug_symbols
+
+RWTexture2D<float> _SourceTex;
+RWTexture2D<float> _DestTex;
+float4 _Count;
+
+[numthreads(KERNEL_SIZE, KERNEL_SIZE, 1)]
+void HizGenCS(
+    uint2 GroupId : SV_GroupID,
+    uint GroupThreadIndex : SV_GroupIndex,
+    uint2 GroupThreadId : SV_GroupThreadID,
+    uint2 id : SV_DispatchThreadID)
+{
+    if(id.x > _Count.x || id.y > _Count.y) return;
+    uint2 ori_id = id * 2;
+    float4 value = float4(_SourceTex[ori_id], _SourceTex[ori_id + uint2(1,0)], _SourceTex[ori_id + uint2(1,1)], _SourceTex[ori_id + uint2(0,1)]);
+    #if UNITY_REVERSED_Z
+        float4 addValue = 1.0f;
+        float addValue2 = 1.0f;
+    #else
+        float4 addValue = 0.0f;
+        float addValue2 = 0.0f;
+    #endif
+    
+    if(_Count.z == 1)
+    {
+        addValue.x = _SourceTex[ori_id + uint2(2,0)];
+        addValue.y = _SourceTex[ori_id + uint2(2,1)];
+    }
+
+    if (_Count.w == 1)
+    {
+        addValue.z = _SourceTex[ori_id + uint2(0,2)];
+        addValue.w = _SourceTex[ori_id + uint2(1,2)];
+    }
+
+    if(_Count.z == 1 && _Count.w == 1)
+    {
+        addValue2 = _SourceTex[ori_id + uint2(2,2)];
+    }
+    
+    #if UNITY_REVERSED_Z
+        value.xy = min(value.xy, value.zw);
+        value.x = min(value.x, value.y);
+        addValue.xy = min(addValue.xy, addValue.zw);
+        addValue.x = min(addValue.x, addValue.y);
+        addValue2 = min(addValue2, addValue.x);
+        _DestTex[id] = min(addValue2, value.x);
+    #else
+        value.xy = max(value.xy, value.zw);
+        value.x = max(value.x, value.y);
+        addValue.xy = max(addValue.xy, addValue.zw);
+        addValue.x = max(addValue.x, addValue.y);
+        addValue2 = max(addValue2, addValue.x);
+        _DestTex[id] = max(addValue2, value.x);
+    #endif
+}
