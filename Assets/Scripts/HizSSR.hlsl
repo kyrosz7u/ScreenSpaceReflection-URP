@@ -6,7 +6,7 @@ struct StepState
     // InPixelSpace
     float3 curRayPos;
     int curLevel;
-    int2 curPixelSize;
+    float2 curPixelSize;
     int2 curPixelIndex;
 };
 
@@ -26,10 +26,10 @@ float LoadHiZDepth(uint2 frag, int mipLevel = 0)
 
 float2 GetHizMapSize(int mipLevel)
 {
-    return floor(float2(_ScreenParams.x * pow(0.5f, mipLevel), _ScreenParams.y * pow(0.5f, mipLevel)));
+    return float2((int)_ScreenParams.x >> mipLevel, (int)_ScreenParams.y >> mipLevel);
 }
 
-int2 GetPixelIndex(float2 pixelPos, int mipLevel)
+float2 GetPixelIndex(float2 pixelPos, int mipLevel)
 {
     return floor(pixelPos / pow(2, mipLevel));
 }
@@ -95,17 +95,18 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
 }
 
 
-// return next pixel position in TS
+// return next pixel position
 StepState MoveToNextPixel(float3 startPos, float3 reflDir, float2 mip0Size, int2 increment, StepState curState)
 {
     StepState nextState;
-    const int2 nextPixel = curState.curPixelIndex + increment;
-    const float2 nextPosInMip0 = (float2)nextPixel / curState.curPixelSize * mip0Size;
+    const float2 nextPixel = curState.curPixelIndex + increment;
+    const float2 nextPosInMip0 = nextPixel / curState.curPixelSize * mip0Size;
     float2 delta = nextPosInMip0 - startPos.xy;
     
     delta /= reflDir.xy;
-    float len = min(delta.x, delta.y);
+    const float len = min(delta.x, delta.y);
     nextState.curRayPos = startPos + len * reflDir;
+    nextState.curRayPos.xy += 0.0001f * increment.xy;
     nextState.curLevel = curState.curLevel;
     nextState.curPixelSize = curState.curPixelSize;
     nextState.curPixelIndex = curState.curPixelIndex + (delta.x < delta.y ? int2(increment.x, 0) : int2(0, increment.y));
@@ -121,11 +122,10 @@ float FindIntersection_Hiz(float3 startPos,
     float3 v = maxTraceDistance*reflDirInTS;
     float3 EndPos = startPos + v;
     const float EndZ = EndPos.z;
-    const float DeltaZ = EndZ - startPos.z;
     
     int2 increment;
-    increment.x = v.x >= 0 ? 1.0f : -1.0f;
-    increment.y = v.y >= 0 ? 1.0f : -1.0f;
+    increment.x = v.x >= 0 ? 1.0f : 0.0f;
+    increment.y = v.y >= 0 ? 1.0f : 0.0f;
 
     const float2 mip0Size = GetHizMapSize(0);
     startPos.xy *= mip0Size;
@@ -144,13 +144,12 @@ float FindIntersection_Hiz(float3 startPos,
     
     while(curState.curLevel>=0 && curState.curRayPos.z > EndZ && i<_MaxSteps)
     {
-        float minDepth = LoadHiZDepth(curState.curPixelIndex, curState.curLevel);
-        
         // 由近平面到远平面
-        if(DeltaZ < 0)
+        if(v.z < 0)
         {
             curState.curPixelSize = GetHizMapSize(curState.curLevel);
             curState.curPixelIndex = GetPixelIndex(curState.curRayPos.xy, curState.curLevel);
+            float minDepth = LoadHiZDepth(curState.curPixelIndex, curState.curLevel);
             float3 tmpRay = minDepth < curState.curRayPos.z ? startPos + (minDepth - startPos.z)*v : curState.curRayPos;
             int2 nextPixel = GetPixelIndex(tmpRay.xy, curState.curLevel);
 
