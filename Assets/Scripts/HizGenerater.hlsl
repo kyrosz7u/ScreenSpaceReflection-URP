@@ -37,8 +37,6 @@ float HizGenerater(Varyings input) : SV_Target
     minDepth.xy = max(minDepth.xy, minDepth.zw);
     minDepth.x = max(minDepth.x, minDepth.y);
 
-    // return minDepth.x;
-
     float4 addDepth = 0.0f;
     if(_isWidthOdd == 1)
     {

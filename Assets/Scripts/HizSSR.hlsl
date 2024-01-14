@@ -92,8 +92,7 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     int2 nextPixel = curPixel + increment;
     float2 nextUV = nextPixel / textureSize;
     float2 delta = nextUV - startPosInTS.xy;
-    float2 offset = saturate(increment * 0.00001f);
-    // float2 offset = increment * 0.000001f;
+    float2 offset = float2(increment.x == 0? -1.0f : 1.0f, increment.y == 0? -1.0f : 1.0f) * 0.000001f;
     
     delta /= reflDirInTS.xy;
     float len = min(delta.x, delta.y);
@@ -113,8 +112,6 @@ float FindIntersection_Hiz(float3 startPosInTS,
     int endLevel = 0;
     int curLevel = 2;
     float2 startTextureSize = GetHizMapSize(curLevel);
-
-    // startPosInTS.xy = floor(startPosInTS.xy*startTextureSize)/startTextureSize + 0.25/startTextureSize;
     
     int2 increment;
     float3 EndPosInTS = startPosInTS + maxTraceDistance*reflDirInTS;
@@ -125,8 +122,8 @@ float FindIntersection_Hiz(float3 startPosInTS,
     float3 v = reflDirInTS;
     v /= v.z;
     
-    increment.x = reflDirInTS.x >= 0 ? 1.0f : -1.0f;
-    increment.y = reflDirInTS.y >= 0 ? 1.0f : -1.0f;
+    increment.x = reflDirInTS.x >= 0 ? 1.0f : 0.0f;
+    increment.y = reflDirInTS.y >= 0 ? 1.0f : 0.0f;
     
     int zDirection = EndZ > StartZ ? 1 : -1;
 
