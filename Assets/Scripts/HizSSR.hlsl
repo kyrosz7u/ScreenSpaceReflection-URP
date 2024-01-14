@@ -109,8 +109,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
                            float maxTraceDistance,
                            out float3 outHitPosInTS)
 {
-    int endLevel = 0;
-    int curLevel = 2;
+    int curLevel = 0;
     float2 startTextureSize = GetHizMapSize(curLevel);
     
     int2 increment;
@@ -133,13 +132,8 @@ float FindIntersection_Hiz(float3 startPosInTS,
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);
     int i = 0;
     
-    while(curLevel>=0 && i<_MaxSteps)
+    while(curLevel>=0 && curRayPosInTS.z > EndZ + 0.001f && i<_MaxSteps)
     {
-        if(curRayPosInTS.x < 0.0f || curRayPosInTS.x > 1.0f || curRayPosInTS.y < 0.0f || curRayPosInTS.y > 1.0f)
-        {
-            break;
-        }
-        
         float2 curTextureSize = GetHizMapSize(curLevel);
         int2 curPixel = GetPixelIndex(curRayPosInTS.xy, curTextureSize);
         float minDepth = SamplerHiZDepth(curRayPosInTS.xy, curLevel);
@@ -152,7 +146,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
 
             if(IsPixelIndexEqual(curPixel,nextPixel))
             {
-                if(curLevel==0 && abs(minDepth - curRayPosInTS.z) > _Thickness)
+                if(curLevel==0 && abs(LinearEyeDepth(minDepth, _ZBufferParams) - LinearEyeDepth(curRayPosInTS.z, _ZBufferParams)) > _Thickness)
                 {
                     curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
                 }
