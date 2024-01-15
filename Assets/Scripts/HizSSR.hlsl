@@ -131,7 +131,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);
     int i = 0;
     
-    while(curLevel>=0 && curRayPosInTS.z*zDirection < (EndZ + 0.001f)*zDirection && i<_MaxSteps)
+    while(curLevel>=0 && curRayPosInTS.z*zDirection < (EndZ)*zDirection && i<_MaxSteps)
     {
         float2 curTextureSize = GetHizMapSize(curLevel);
         int2 curPixel = GetPixelIndex(curRayPosInTS.xy, curTextureSize);
