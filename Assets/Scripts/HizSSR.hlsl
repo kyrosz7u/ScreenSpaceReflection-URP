@@ -82,7 +82,7 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
     outMaxLength = min(outMaxLength,
                        outReflDirInTS.z > 0
                            ? (1.0f - outSamplePosInTS.z) / outReflDirInTS.z
-                           : -outSamplePosInTS.z / outReflDirInTS.z);
+                           : 0-outSamplePosInTS.z / outReflDirInTS.z);
 }
 
 
@@ -116,6 +116,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
     float3 EndPosInTS = startPosInTS + maxTraceDistance*reflDirInTS;
     float StartZ = startPosInTS.z;
     float EndZ = EndPosInTS.z;
+    EndZ = clamp(EndZ, 0.001f, 0.999f);
     float DeltaZ = EndZ - StartZ;
 
     float3 v = reflDirInTS;
