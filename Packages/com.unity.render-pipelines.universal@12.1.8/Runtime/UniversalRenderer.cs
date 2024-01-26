@@ -117,6 +117,9 @@ namespace UnityEngine.Rendering.Universal
         // For tiled-deferred shading.
         RenderTargetHandle m_DepthInfoTexture;
         RenderTargetHandle m_TileDepthInfoTexture;
+        
+        // Hiz Pass
+        RenderTexture m_HizMap;
 
         ForwardLights m_ForwardLights;
         DeferredLights m_DeferredLights;
@@ -1252,6 +1255,22 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 return m_NormalsTexture.Identifier();
+            }
+        }
+
+        public RenderTexture hizMap
+        {
+            get { return m_HizMap; }
+            
+            set
+            {
+                if (m_HizMap != null)
+                {
+                    RenderTexture.ReleaseTemporary(m_HizMap);
+                    m_HizMap = null;
+                }
+
+                m_HizMap = value;
             }
         }
     }
