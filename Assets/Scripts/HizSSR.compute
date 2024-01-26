@@ -1,0 +1,11 @@
+#pragma kernel HiZSSRCS KERNEL_SIZE = 8
+
+[numthreads(KERNEL_SIZE, KERNEL_SIZE, 1)]
+void HiZSSRCS(
+    uint2 GroupId : SV_GroupID,
+    uint GroupThreadIndex : SV_GroupIndex,
+    uint2 GroupThreadId : SV_GroupThreadID,
+    uint2 id : SV_DispatchThreadID)
+{
+    
+}
