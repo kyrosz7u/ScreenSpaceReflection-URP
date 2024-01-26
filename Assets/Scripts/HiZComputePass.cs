@@ -9,7 +9,6 @@ public class HiZComputePass : ScriptableRenderPass
     private UniversalRenderer m_Renderer;
     private RenderTexture hizMap;
     private RenderTargetIdentifier m_DepthTexture;
-    private Material m_Material;
     private ComputeShader m_Shader;
     private int m_DeepMipMapID = Shader.PropertyToID("_DeepMipMap");
     
@@ -17,7 +16,6 @@ public class HiZComputePass : ScriptableRenderPass
     {
         this.renderPassEvent = renderPassEvent;
         m_Renderer = (UniversalRenderer)renderer;
-        m_Material = CoreUtils.CreateEngineMaterial("HiZGenerater");
         m_Shader = cs;
         ConfigureInput(ScriptableRenderPassInput.Depth);
     }
@@ -33,9 +31,9 @@ public class HiZComputePass : ScriptableRenderPass
         
         int width = renderingData.cameraData.cameraTargetDescriptor.width;
         int height = renderingData.cameraData.cameraTargetDescriptor.height;
-
         int mipCount = Mathf.FloorToInt(Mathf.Log(Mathf.Min(width, height), 2)) + 1;
         
+        hizMap = m_Renderer.hizMap;
         RenderTextureDescriptor hizMapDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.RFloat, 0);
         
         hizMapDesc.autoGenerateMips = false;
@@ -54,10 +52,10 @@ public class HiZComputePass : ScriptableRenderPass
         hizMapDesc.colorFormat = RenderTextureFormat.RFloat;
         hizMapDesc.mipCount = mipCount;
         
-        hizMap = RenderTexture.GetTemporary(hizMapDesc);
-        hizMap.filterMode = FilterMode.Point;
-        hizMap.name = "HizMap";
-        hizMap.Create();
+        m_Renderer.hizMap = RenderTexture.GetTemporary(hizMapDesc);
+        m_Renderer.hizMap.filterMode = FilterMode.Point;
+        m_Renderer.hizMap.name = "HizMap";
+        m_Renderer.hizMap.Create();
         
         cmd.Blit(m_DepthTexture, hizMap);
         
@@ -81,14 +79,14 @@ public class HiZComputePass : ScriptableRenderPass
             int y = Mathf.CeilToInt(count.y / 8f);
             cmd.DispatchCompute(m_Shader, 0, x, y, 1);
         }
+        
         cmd.SetGlobalInt("_HizMapMipCount", mipCount);
-        cmd.SetGlobalTexture("_HizMap", hizMap); 
         cmd.SetRenderTarget(m_Renderer.cameraColorTarget,m_Renderer.cameraDepthTarget);
         context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
     }
     public override void FrameCleanup(CommandBuffer cmd)
     {
-        RenderTexture.ReleaseTemporary(hizMap);
+        RenderTexture.ReleaseTemporary(m_Renderer.hizMap);
     }
 }

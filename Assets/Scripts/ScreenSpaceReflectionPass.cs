@@ -81,6 +81,7 @@ public class ScreenSpaceReflectionPass : ScriptableRenderPass
 
         cmd.SetGlobalTexture(CameraColorTexture, m_ColorTexture);
         cmd.SetGlobalTexture(CameraNormalsTex, m_NormalTexture);
+        m_Material.SetTexture("_HizMap", m_Renderer.hizMap);
         
         cmd.SetRenderTarget(m_OddBuffer, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0,
