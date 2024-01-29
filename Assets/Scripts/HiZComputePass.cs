@@ -57,7 +57,7 @@ public class HiZComputePass : ScriptableRenderPass
         m_Renderer.hizMap.name = "HizMap";
         m_Renderer.hizMap.Create();
         
-        cmd.Blit(m_DepthTexture, hizMap);
+        cmd.Blit(m_DepthTexture, m_Renderer.hizMap);
         
         for(int i=1; i < mipCount; i++)
         {
@@ -71,9 +71,12 @@ public class HiZComputePass : ScriptableRenderPass
             int isOddx = (srcWidth % 2 == 0) ? 0 : 1;
             int isOddy = (srcHeight % 2 == 0) ? 0 : 1;
             
-            cmd.SetComputeTextureParam(m_Shader, 0, "_SourceTex", hizMap, i - 1);
-            cmd.SetComputeTextureParam(m_Shader, 0, "_DestTex", hizMap, i);
-            cmd.SetComputeVectorParam(m_Shader, "_Count", new Vector4(halfWidth, halfHeight, isOddx, isOddy));
+            // cmd.SetComputeTextureParam(m_Shader, 0, "_SourceTex", hizMap, i - 1);
+            // cmd.SetComputeTextureParam(m_Shader, 0, "_DestTex", hizMap, i);
+            // cmd.SetComputeVectorParam(m_Shader, "_Count", new Vector4(halfWidth, halfHeight, isOddx, isOddy));
+            m_Shader.SetTexture(0, "_SourceTex", m_Renderer.hizMap, i - 1);
+            m_Shader.SetTexture(0, "_DestTex", m_Renderer.hizMap, i);
+            m_Shader.SetVector("_Count", new Vector4(halfWidth, halfHeight, isOddx, isOddy));
             
             int x = Mathf.CeilToInt(count.x / 8f);
             int y = Mathf.CeilToInt(count.y / 8f);

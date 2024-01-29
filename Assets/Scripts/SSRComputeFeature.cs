@@ -20,11 +20,10 @@ public class SSRComputeFeature: ScriptableRendererFeature
     }
     
     [Reload("Assets/Scripts/HizSSR.compute")]
-    public ComputeShader HizSSRShader; 
+    public ComputeShader HizSSRCS; 
     public SSRComputeFeatureSettings settings = new SSRComputeFeatureSettings();
     private SSRComputePass m_SSRComputePass;
 
-    private RenderTargetHandle m_ScreenSpaceReflectionTexture;
     public override void Create()
     {
         
@@ -33,7 +32,7 @@ public class SSRComputeFeature: ScriptableRendererFeature
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         m_SSRComputePass = new SSRComputePass();
-        m_SSRComputePass.Setup(settings.Event, settings, (UniversalRenderer)renderer, HizSSRShader);
+        m_SSRComputePass.Setup(settings.Event, settings, (UniversalRenderer)renderer, HizSSRCS);
             
         renderer.EnqueuePass(m_SSRComputePass);
     }

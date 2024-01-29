@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c173f6b0c6c99044b3d2f50292456f4, type: 3}
   m_Name: ScreenSpaceReflectionFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     Event: 500
     MaxSteps: 100
@@ -59,6 +59,29 @@ MonoBehaviour:
       passOperation: 0
       failOperation: 0
       zFailOperation: 0
+--- !u!114 &-3672850051024579017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8e418c13b1d4b139c62f336dee309a1, type: 3}
+  m_Name: SSRComputeFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  HizSSRCS: {fileID: 7200000, guid: d13a43ed8cda4e82ac952111f0019268, type: 3}
+  settings:
+    Event: 500
+    MaxSteps: 32
+    MaxDistance: 100
+    Thickness: 0.1
+    ReflectionStride: 0.5
+    ReflectionJitter: 1
+    ReflectionBlurSpread: 0
+    LuminanceCloseOpThreshold: 0.5
 --- !u!114 &-1314729808787458485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -127,7 +150,8 @@ MonoBehaviour:
   - {fileID: -8734328408597960502}
   - {fileID: -4941681776736570633}
   - {fileID: -1268201664469782132}
-  m_RendererFeatureMap: ca68eabd966ec986f77298309b9e6bbb8c31b82d4e7166ee
+  - {fileID: -3672850051024579017}
+  m_RendererFeatureMap: ca68eabd966ec986f77298309b9e6bbb8c31b82d4e7166ee37966793566a07cd
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
