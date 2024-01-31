@@ -15,9 +15,9 @@ MonoBehaviour:
   m_Active: 1
   settings:
     Event: 500
-    MaxSteps: 100
+    MaxSteps: 200
     MaxDistance: 30.19
-    Thickness: 0.05
+    Thickness: 0.03
     ReflectionStride: 0.705
     ReflectionJitter: 1
     ReflectionBlurSpread: 0.111
@@ -35,7 +35,7 @@ MonoBehaviour:
   m_Name: HiZGeneraterFeature
   m_EditorClassIdentifier: 
   m_Active: 0
-  Event: 400
+  Event: 500
 --- !u!114 &-3762375231141570225
 MonoBehaviour:
   m_ObjectHideFlags: 0

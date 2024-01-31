@@ -3,10 +3,6 @@
 
 float SamplerHiZDepth(float2 uv, int mipLevel = 0)
 {
-    if(uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-    {
-        return 0.0f;
-    }
     return SAMPLE_TEXTURE2D_X_LOD(_HizMap, sampler_HizMap, uv, mipLevel).r;
 }
 
@@ -56,13 +52,13 @@ void ComputePosAndReflection(float depth, float2 uv, float3 normal, out float3 o
     float3 viewDir = normalize(viewPos.xyz);
     // view transform don't have scale, so that V_IT = V
     float3 normalVS = normalize(mul(UNITY_MATRIX_V, normal).xyz);
-    float3 reflectDir = normalize(reflect(viewDir, normalVS));
+    float3 reflectDirVS = normalize(reflect(viewDir, normalVS));
 
-    float rayLength = (_ProjectionParams.x * (viewPos.z + reflectDir.z * _MaxDistance) < _ProjectionParams.y)
-                          ? (_ProjectionParams.y - _ProjectionParams.x * viewPos.z) / reflectDir.z * _ProjectionParams.x
+    float rayLength = (_ProjectionParams.x * (viewPos.z + reflectDirVS.z * _MaxDistance) < _ProjectionParams.y)
+                          ? (_ProjectionParams.y - _ProjectionParams.x * viewPos.z) / reflectDirVS.z * _ProjectionParams.x
                           : _MaxDistance;
 
-    float3 endPosInVS = viewPos + reflectDir * rayLength;
+    float3 endPosInVS = viewPos + reflectDirVS * rayLength;
     float4 endPosInTS = mul(UNITY_MATRIX_P, float4(endPosInVS, 1.0f));
     endPosInTS /= endPosInTS.w;
     #if UNITY_UV_STARTS_AT_TOP
@@ -92,7 +88,8 @@ float3 MoveToNextPixel(float3 startPosInTS, int2 curPixel, float3 reflDirInTS, i
     int2 nextPixel = curPixel + increment;
     float2 nextUV = nextPixel / textureSize;
     float2 delta = nextUV - startPosInTS.xy;
-    float2 offset = float2(increment.x == 0? -1.0f : 1.0f, increment.y == 0? -1.0f : 1.0f) * 0.0001f;
+    // offset太大了会造成形状的畸变
+    float2 offset = float2(increment.x == 0? -1.0f : 1.0f, increment.y == 0? -1.0f : 1.0f) * 0.00001f;
     
     delta /= reflDirInTS.xy;
     float len = min(delta.x, delta.y);
@@ -146,7 +143,7 @@ float FindIntersection_Hiz(float3 startPosInTS,
 
             if(IsPixelIndexEqual(curPixel,nextPixel))
             {
-                if(curLevel==0 && abs(LinearEyeDepth(minDepth, _ZBufferParams) - LinearEyeDepth(curRayPosInTS.z, _ZBufferParams)) > _Thickness)
+                if(curLevel==0 && LinearEyeDepth(curRayPosInTS.z, _ZBufferParams) - LinearEyeDepth(minDepth, _ZBufferParams) > _Thickness)
                 {
                     curRayPosInTS = MoveToNextPixel(curRayPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
                 }
@@ -252,7 +249,16 @@ float4 HiZSSR(Varyings input) : SV_Target
     #else
     depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(input.uv, 0));
     #endif
-    normal = SampleSceneNormals(input.uv);
+    // normal = SampleSceneNormals(input.uv);
+    float4 normalAndSmooth = SAMPLE_TEXTURE2D_X(_CameraNormalsTexture, sampler_CameraNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv));
+    normal = normalAndSmooth.xyz;
+    float smooth = normalAndSmooth.w;
+
+    #if defined(_GBUFFER_NORMALS_OCT)
+    float2 remappedOctNormalWS = Unpack888ToFloat2(normal.xyz); // values between [ 0,  1]
+    float2 octNormalWS = remappedOctNormalWS.xy * 2.0 - 1.0;    // values between [-1, +1]
+    normal = UnpackNormalOctQuadEncode(octNormalWS);
+    #endif
 
 
     float3 samplePosInTS;
@@ -261,11 +267,12 @@ float4 HiZSSR(Varyings input) : SV_Target
     float maxLength;
 
     ComputePosAndReflection(depth, input.uv, normal, samplePosInTS, reflDirInTS, maxLength);
-
     float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, hitPosInTS);
 
-    float4 reflColor = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, hitPosInTS.xy);
-    reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? 1.0f : 0.0f);
+    float2 curTextureSize = GetHizMapSize(0);
+    int2 curPixel = GetPixelIndex(hitPosInTS.xy, curTextureSize);
+    float4 reflColor = LOAD_TEXTURE2D(_CameraColorTexture, curPixel);
+    reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? smooth : 0.0f);
 
     return float4(color.rgb + reflColor.rgb, color.a);
 }
