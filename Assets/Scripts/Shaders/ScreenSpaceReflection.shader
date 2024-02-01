@@ -58,7 +58,7 @@
 
             HLSLPROGRAM
             #pragma vertex FullScreenVert
-            #pragma fragment HiZSSR
+            #pragma fragment SSR
             #pragma enable_d3d11_debug_symbols
             ENDHLSL
         }

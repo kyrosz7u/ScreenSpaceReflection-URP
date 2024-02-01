@@ -23,7 +23,7 @@ public class FPS : MonoBehaviour
 
     void OnGUI()
     {
-        GUI.Label(new Rect(100, 100, 200, 200), fpsFormat, fpsLabelStyle);
+        GUI.Label(new Rect(100, 100, 200, 200), "Hiz-200Step\n"+fpsFormat, fpsLabelStyle);
     }
 
     void Update()
@@ -40,7 +40,6 @@ public class FPS : MonoBehaviour
             float fps = _accum / _frames;
             //Debug.Log(_accum + "__" + _frames);  
             fpsFormat = System.String.Format("{0:F2}FPS", fps);//保留两位小数  
-            Debug.LogError(fpsFormat);
 
             _timeLeft = _updateInterval;
             _accum = .0f;

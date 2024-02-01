@@ -1,4 +1,4 @@
-﻿#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
 
 float SamplerHiZDepth(float2 uv, int mipLevel = 0)
@@ -190,89 +190,95 @@ float FindIntersection_Hiz(float3 startPosInTS,
 }
 
 
-// float FindIntersection_Linear(float3 startPosInTS,
-//                               float3 reflDirInTS,
-//                               float maxTraceDistance,
-//                               out float3 outHitPosInTS)
-// {
-//     float3 endPosInTS = startPosInTS + reflDirInTS * maxTraceDistance;
-//
-//     float3 dp = endPosInTS - startPosInTS;
-//     int2 dp2 = int2(dp.xy * GetHizMapSize(0));
-//     uint maxDist = max(abs(dp2.x), abs(dp2.y));
-//     dp = dp / max(maxDist, 1);
-//
-//     float3 curPosInTS = startPosInTS;
-//     outHitPosInTS = startPosInTS;
-//     bool isHit = false;
-//
-//     for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
-//     {
-//         // curPosInTS += dp;
-//         int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
-//         curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, 0);
-//
-//         if(curPosInTS.x < 0 || curPosInTS.x > 1 || curPosInTS.y < 0 || curPosInTS.y > 1)
-//         {
-//             break;
-//         }
-//         
-//         #if UNITY_REVERSED_Z
-//         float curDepth = SamplerHiZDepth(curPosInTS.xy, 0);
-//         #else
-//         float curDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(sampleUV, 0));
-//         #endif
-//
-//         if (curPosInTS.z < curDepth && curPosInTS.z > _Thickness * curDepth && curDepth - curPosInTS.z < _Thickness *
-//             curDepth)
-//         {
-//             outHitPosInTS = curPosInTS;
-//             isHit = true;
-//             break;
-//         }
-//     }
-//
-//     return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
-// }
+float FindIntersection_Linear(float3 startPosInTS,
+                              float3 reflDirInTS,
+                              float maxTraceDistance,
+                              out float3 outHitPosInTS)
+{
+    float3 endPosInTS = startPosInTS + reflDirInTS * maxTraceDistance;
+
+    float3 dp = endPosInTS - startPosInTS;
+    int2 dp2 = int2(dp.xy * GetHizMapSize(0));
+    uint maxDist = max(abs(dp2.x), abs(dp2.y));
+    dp = dp / max(maxDist, 1);
+
+    float3 curPosInTS = startPosInTS;
+    outHitPosInTS = startPosInTS;
+    bool isHit = false;
+    float2 curTextureSize = GetHizMapSize(0);
+    int2 increment;
+    
+    increment.x = reflDirInTS.x >= 0 ? 1.0f : 0.0f;
+    increment.y = reflDirInTS.y >= 0 ? 1.0f : 0.0f;
+
+    for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
+    {
+        int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
+        curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
+        
+        #if UNITY_REVERSED_Z
+        float curDepth = SamplerHiZDepth(curPosInTS.xy, 0);
+        #else
+        float curDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(curPosInTS.xy, 0));
+        #endif
+        
+        // if (LinearEyeDepth(curDepth, _ZBufferParams) - LinearEyeDepth(curPosInTS.z, _ZBufferParams))
+        if (curPosInTS.z < curDepth && LinearEyeDepth(curPosInTS.z, _ZBufferParams) - LinearEyeDepth(curDepth, _ZBufferParams) < _Thickness)
+        {
+            outHitPosInTS = curPosInTS;
+            isHit = true;
+            break;
+        }
+    }
+
+    return isHit ? length(outHitPosInTS - startPosInTS) : 0.0f;
+}
 
 
-float4 HiZSSR(Varyings input) : SV_Target
+float4 SSR(Varyings input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-    float depth;
-    float3 normal;
-    float4 color;
     
-    color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, input.uv);
-    #if UNITY_REVERSED_Z
-    depth = SamplerHiZDepth(input.uv, 0);
-    #else
-    depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(input.uv, 0));
-    #endif
-    // normal = SampleSceneNormals(input.uv);
+    float4 color;
+    float4 reflColor = float4(0, 0, 0, 0);
+    
     float4 normalAndSmooth = SAMPLE_TEXTURE2D_X(_CameraNormalsTexture, sampler_CameraNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv));
-    normal = normalAndSmooth.xyz;
+    float3 normal = normalAndSmooth.xyz;
     float smooth = normalAndSmooth.w;
+    color = SAMPLE_TEXTURE2D_X(_CameraColorTexture, sampler_CameraColorTexture, input.uv);
+    
+    if(smooth > 0.5)
+    {
+        float depth;
+        
+        #if UNITY_REVERSED_Z
+        depth = SamplerHiZDepth(input.uv, 0);
+        #else
+        depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(input.uv, 0));
+        #endif
+        // normal = SampleSceneNormals(input.uv);
+    
 
-    #if defined(_GBUFFER_NORMALS_OCT)
-    float2 remappedOctNormalWS = Unpack888ToFloat2(normal.xyz); // values between [ 0,  1]
-    float2 octNormalWS = remappedOctNormalWS.xy * 2.0 - 1.0;    // values between [-1, +1]
-    normal = UnpackNormalOctQuadEncode(octNormalWS);
-    #endif
+        #if defined(_GBUFFER_NORMALS_OCT)
+        float2 remappedOctNormalWS = Unpack888ToFloat2(normal.xyz); // values between [ 0,  1]
+        float2 octNormalWS = remappedOctNormalWS.xy * 2.0 - 1.0;    // values between [-1, +1]
+        normal = UnpackNormalOctQuadEncode(octNormalWS);
+        #endif
 
 
-    float3 samplePosInTS;
-    float3 hitPosInTS;
-    float3 reflDirInTS;
-    float maxLength;
+        float3 samplePosInTS;
+        float3 hitPosInTS;
+        float3 reflDirInTS;
+        float maxLength;
 
-    ComputePosAndReflection(depth, input.uv, normal, samplePosInTS, reflDirInTS, maxLength);
-    float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, hitPosInTS);
+        ComputePosAndReflection(depth, input.uv, normal, samplePosInTS, reflDirInTS, maxLength);
+        float pos = FindIntersection_Hiz(samplePosInTS, reflDirInTS, maxLength, hitPosInTS);
 
-    float2 curTextureSize = GetHizMapSize(0);
-    int2 curPixel = GetPixelIndex(hitPosInTS.xy, curTextureSize);
-    float4 reflColor = LOAD_TEXTURE2D(_CameraColorTexture, curPixel);
-    reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? smooth : 0.0f);
-
+        float2 curTextureSize = GetHizMapSize(0);
+        int2 curPixel = GetPixelIndex(hitPosInTS.xy, curTextureSize);
+        reflColor = LOAD_TEXTURE2D(_CameraColorTexture, curPixel);
+        reflColor = lerp(float4(0, 0, 0, 0), reflColor, pos > 0 ? 2.0f*smooth - 1.0f : 0.0f);
+    }
+    
     return float4(color.rgb + reflColor.rgb, color.a);
 }
