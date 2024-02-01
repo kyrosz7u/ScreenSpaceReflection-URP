@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c173f6b0c6c99044b3d2f50292456f4, type: 3}
   m_Name: ScreenSpaceReflectionFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   settings:
     Event: 500
     MaxSteps: 1000
@@ -71,7 +71,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8e418c13b1d4b139c62f336dee309a1, type: 3}
   m_Name: SSRComputeFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   HizSSRCS: {fileID: 7200000, guid: d13a43ed8cda4e82ac952111f0019268, type: 3}
   settings:
     Event: 500

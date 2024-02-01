@@ -9,7 +9,6 @@ namespace UnityTemplateProjects
 {
     public class HiZGeneraterPass: ScriptableRenderPass
     {
-        private RenderTexture hizMap;
         private UniversalRenderer m_Renderer;
         private RenderTargetIdentifier m_DepthTexture;
         private Material m_Material;
@@ -80,9 +79,6 @@ namespace UnityTemplateProjects
                 
                 cmd.SetGlobalTexture(m_DeepMipMapID, tmpTex);
                 
-                // cmd.SetGlobalFloat("_SrcWidthInv", 0.5f / srcWidth);
-                // cmd.SetGlobalFloat("_SrcHeightInv", 0.5f / srcHeight);
-                
                 int halfWidth = srcWidth >> 1;
                 int halfHeight = srcHeight >> 1;
                 
@@ -92,8 +88,6 @@ namespace UnityTemplateProjects
                 
                 cmd.SetRenderTarget(m_Renderer.hizMap, i);
                 cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
-                
-                // RenderTexture.ReleaseTemporary(tmpTex);
             }
             cmd.SetGlobalInt("_HizMapMipCount", mipCount);
             cmd.SetGlobalTexture("_HizMap", m_Renderer.hizMap); 
