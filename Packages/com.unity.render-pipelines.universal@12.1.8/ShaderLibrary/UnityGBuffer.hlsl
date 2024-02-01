@@ -163,7 +163,8 @@ SurfaceData SurfaceDataFromGbuffer(half4 gbuffer0, half4 gbuffer1, half4 gbuffer
 
     surfaceData.metallic = 0.0; // Not used by SimpleLit material.
     surfaceData.alpha = 1.0; // gbuffer only contains opaque materials
-    surfaceData.smoothness = smoothness;
+    surfaceData.smoothness = 2.0f * (smoothness > 0.5f? smoothness-0.5f : smoothness);// gbuffer stores smoothness in [0, 0.5] range, when smoothness > 0.5, it means that the material is ssr enabled
+    
 
     surfaceData.emission = (half3)0; // Note: this is not made available at lighting pass in this renderer - emission contribution is included (with GI) in the value GBuffer3.rgb, that is used as a renderTarget during lighting
     surfaceData.normalTS = (half3)0; // Note: does this normalTS member need to be in SurfaceData? It looks like an intermediate value
@@ -204,10 +205,16 @@ FragmentOutput BRDFDataToGbuffer(BRDFData brdfData, InputData inputData, half sm
     materialFlags |= kMaterialFlagSubtractiveMixedLighting;
     #endif
 
+    float ssr_enabled = 0.0;
+    #ifdef _ENABLE_SSR
+    ssr_enabled = 0.5;
+    #endif
+    
+
     FragmentOutput output;
     output.GBuffer0 = half4(brdfData.albedo.rgb, PackMaterialFlags(materialFlags));  // diffuse           diffuse         diffuse         materialFlags   (sRGB rendertarget)
     output.GBuffer1 = half4(packedSpecular, occlusion);                              // metallic/specular specular        specular        occlusion
-    output.GBuffer2 = half4(packedNormalWS, smoothness);                             // encoded-normal    encoded-normal  encoded-normal  smoothness
+    output.GBuffer2 = half4(packedNormalWS, 0.5*smoothness + ssr_enabled);                             // encoded-normal    encoded-normal  encoded-normal  smoothness
     output.GBuffer3 = half4(globalIllumination, 1);                                  // GI                GI              GI              [optional: see OutputAlpha()] (lighting buffer)
     #if _RENDER_PASS_ENABLED
     output.GBuffer4 = inputData.positionCS.z;
@@ -231,6 +238,8 @@ BRDFData BRDFDataFromGbuffer(half4 gbuffer0, half4 gbuffer1, half4 gbuffer2)
     half3 specular = gbuffer1.rgb;
     uint materialFlags = UnpackMaterialFlags(gbuffer0.a);
     half smoothness = gbuffer2.a;
+
+    smoothness = 2.0f * (smoothness > 0.5f? smoothness-0.5f : smoothness);// gbuffer stores smoothness in [0, 0.5] range, when smoothness > 0.5, it means that the material is ssr enabled
 
     BRDFData brdfData = (BRDFData)0;
     half alpha = half(1.0); // NOTE: alpha can get modfied, forward writes it out (_ALPHAPREMULTIPLY_ON).

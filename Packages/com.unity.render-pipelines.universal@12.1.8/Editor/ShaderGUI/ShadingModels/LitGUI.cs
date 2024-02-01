@@ -41,6 +41,10 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public static GUIContent reflectionsText =
                 EditorGUIUtility.TrTextContent("Environment Reflections",
                     "When enabled, the Material samples reflections from the nearest Reflection Probes or Lighting Probe.");
+            
+            public static GUIContent ssrText =
+                EditorGUIUtility.TrTextContent("Screen Space Reflections",
+                    "When enabled, the Material will calculate reflections based on the SSR Render feature settings in the Universal Render Pipeline Asset.");
 
             public static GUIContent heightMapText = EditorGUIUtility.TrTextContent("Height Map",
                 "Defines a Height Map that will drive a parallax effect in the shader making the surface seem displaced.");
@@ -87,6 +91,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             // Advanced Props
             public MaterialProperty highlights;
             public MaterialProperty reflections;
+            public MaterialProperty ssr;
 
             public MaterialProperty clearCoat;  // Enable/Disable dummy property
             public MaterialProperty clearCoatMap;
@@ -113,6 +118,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 // Advanced Props
                 highlights = BaseShaderGUI.FindProperty("_SpecularHighlights", properties, false);
                 reflections = BaseShaderGUI.FindProperty("_EnvironmentReflections", properties, false);
+                ssr = BaseShaderGUI.FindProperty("_SSR_ON", properties, false);
 
                 clearCoat = BaseShaderGUI.FindProperty("_ClearCoat", properties, false);
                 clearCoatMap = BaseShaderGUI.FindProperty("_ClearCoatMap", properties, false);
@@ -284,6 +290,8 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                     material.GetFloat("_EnvironmentReflections") == 0.0f);
             if (material.HasProperty("_OcclusionMap"))
                 CoreUtils.SetKeyword(material, "_OCCLUSIONMAP", material.GetTexture("_OcclusionMap"));
+            if(material.HasProperty("_SSR_ON"))
+                CoreUtils.SetKeyword(material, "_ENABLE_SSR", material.GetFloat("_SSR_ON") == 1.0f);
 
             if (material.HasProperty("_ParallaxMap"))
                 CoreUtils.SetKeyword(material, "_PARALLAXMAP", material.GetTexture("_ParallaxMap"));
