@@ -22,10 +22,7 @@
 
     TEXTURE2D_X_FLOAT(_CameraColorTexture);
     SAMPLER(sampler_CameraColorTexture);
-
-    TEXTURE2D_X_FLOAT(_MainTex);
-    SAMPLER(sampler_MainTex);
-
+    
     TEXTURE2D_X_FLOAT(_HizMap);
     SAMPLER(sampler_HizMap);
     

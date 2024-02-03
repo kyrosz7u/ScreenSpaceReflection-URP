@@ -1,5 +1,6 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareNormalsTexture.hlsl"
+#include "Packages/com.unity.render-pipelines.universal@12.1.8/ShaderLibrary/DeclareDepthTexture.hlsl"
 
 float SamplerHiZDepth(float2 uv, int mipLevel = 0)
 {
@@ -128,7 +129,8 @@ float FindIntersection_Hiz(float3 startPosInTS,
     
     float3 curRayPosInTS = MoveToNextPixel(startPosInTS, startPixel, reflDirInTS, increment, startTextureSize);
     int i = 0;
-    
+
+    UNITY_LOOP
     while(curLevel>=0 && curRayPosInTS.z*zDirection < (EndZ)*zDirection && i<_MaxSteps)
     {
         float2 curTextureSize = GetHizMapSize(curLevel);
@@ -211,13 +213,15 @@ float FindIntersection_Linear(float3 startPosInTS,
     increment.x = reflDirInTS.x >= 0 ? 1.0f : 0.0f;
     increment.y = reflDirInTS.y >= 0 ? 1.0f : 0.0f;
 
+    UNITY_LOOP
     for (int i = 0; i < maxDist && i < _MaxSteps; ++i)
     {
         int2 curPixel = GetPixelIndexInHizMap(curPosInTS.xy, 0);
         curPosInTS = MoveToNextPixel(curPosInTS, curPixel, reflDirInTS, increment, curTextureSize);
         
         #if UNITY_REVERSED_Z
-        float curDepth = SamplerHiZDepth(curPosInTS.xy, 0);
+        // float curDepth = SamplerHiZDepth(curPosInTS.xy, 0);
+        float curDepth = SampleSceneDepth(curPosInTS.xy);
         #else
         float curDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(curPosInTS.xy, 0));
         #endif
@@ -253,6 +257,7 @@ float4 SSR(Varyings input) : SV_Target
         
         #if UNITY_REVERSED_Z
         depth = SamplerHiZDepth(input.uv, 0);
+        // depth = SampleSceneDepth(input.uv);
         #else
         depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SamplerHiZDepth(input.uv, 0));
         #endif
